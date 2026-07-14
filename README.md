@@ -20,8 +20,10 @@ NexusAI is a production-grade, asynchronous Enterprise Agentic Retrieval-Augment
 - **Core Framework**: Python 3.12+, FastAPI
 - **Web Server**: Uvicorn (ASGI)
 - **Database Engine**: PostgreSQL 16 (Alpine)
+- **Vector Index**: ChromaDB (Local Store)
 - **ORM / Driver**: SQLAlchemy 2.0, asyncpg
-- **Package Manager**: uv
+- **Frontend Stack**: Next.js 15, React 19, Tailwind CSS, Recharts, Zustand
+- **Package Manager**: uv (Backend), npm (Frontend)
 - **Infrastructure**: Docker, Docker Compose
 
 ---
@@ -67,30 +69,21 @@ NexusAI uses a stateless, layered web and data model architecture to ensure clea
 NexusAI/
 ├── .agents/                    # Custom agent styling rules and configurations
 │   └── AGENTS.md               # Active workspace rules for coding assistants
-├── backend/
+├── backend/                    # FastAPI core app & database migrations
 │   ├── app/
 │   │   ├── api/                # Presentation Layer (routers and HTTP paths)
-│   │   │   ├── v1/
-│   │   │   │   └── health.py   # System status and db integrity checks
-│   │   │   └── router.py       # Master API router registration
-│   │   ├── core/               # Configuration, security, and DB connector pool
-│   │   │   ├── config.py       # Pydantic settings loading env variables
-│   │   │   └── database.py     # SQLAlchemy async engine session generators
 │   │   ├── models/             # Data Layer (SQLAlchemy Declarative Base models)
-│   │   │   ├── base.py         # Unified metadata registry import
-│   │   │   ├── conversation.py # Conversation relational schemas
-│   │   │   ├── document.py     # Document metadata indexing models
-│   │   │   └── user.py         # Secure User properties and cascades
-│   │   └── main.py             # Server initialization and middleware registry
+│   │   └── services/           # Business Layer (RAG search & chat loops)
 │   ├── pyproject.toml          # Workspace Python configurations and uv locks
-│   └── .env                    # Environment credentials (gitignored in production)
+│   └── .env                    # Environment credentials
+├── frontend/                   # Next.js 15 Enterprise UI Client
+│   ├── app/                    # App Router pages (Dashboard, Chat, Knowledge, Agents)
+│   ├── components/             # Reusable UI controls and global layouts
+│   ├── store/                  # Zustand global state manager
+│   ├── services/               # API service adapter layer
+│   └── package.json            # Node project configuration
 ├── docs/                       # High-value system documentation
-│   ├── HANDBOOK.md             # AI Engineering concept handbook
-│   ├── GLOSSARY.md             # Glossary of technical terms
-│   └── architecture-decisions/ # Architectural Decision Records (ADRs)
-└── infrastructure/
-    └── docker/
-        └── docker-compose.yml  # Docker Compose file for PostgreSQL infrastructure
+└── infrastructure/             # Docker compose deployment configurations
 ```
 
 ---
@@ -99,45 +92,47 @@ NexusAI/
 
 ### 1. Prerequisites
 - [uv](https://github.com/astral-sh/uv) (recommended Python package runner)
+- Node.js 20+ and npm
 - Docker and Docker Compose
 
-### 2. Setup Infrastructure
+### 2. Setup Infrastructure & Backend
 Spin up the local PostgreSQL container:
 ```bash
 docker compose -f infrastructure/docker/docker-compose.yml up -d
 ```
 
-### 3. Install Dependencies
 Navigate to the backend directory and install packages using `uv`:
 ```bash
 cd backend
 uv sync
 ```
 
-### 4. Configure Environment Variables
 Create a `.env` file inside the `backend` folder:
 ```env
 DATABASE_URL=postgresql+asyncpg://postgres:postgres_password@localhost:5432/nexusai
+OPENAI_API_KEY=your_key_here
 ```
 
-### 5. Running the Application Locally
 Run the FastAPI development server:
 ```bash
 uv run uvicorn backend.app.main:app --reload --port 8000
 ```
-Visit `http://localhost:8000/docs` to interactive test our Swagger UI endpoints.
+Visit `http://localhost:8000/docs` to test our Swagger UI endpoints.
+
+### 3. Setup Frontend Client
+Navigate to the frontend directory, install npm packages, and run the Next.js development server:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open `http://localhost:3000` to interact with the NexusAI Enterprise Platform!
 
 ---
 
 ## Roadmap
 
 - [x] **Milestone 1: Foundation (v0.1.0)** - Async FastAPI core, SQLAlchemy modeling, PostgreSQL container setup, and database migrations framework.
-- [ ] **Milestone 2: Basic RAG (v0.2.0)** - Document chunking pipelines, hybrid retrieval models (sparse + dense), vector database integration, and basic semantic search.
+- [x] **Milestone 2: Basic RAG & persistence (v0.2.0)** - Document chunking pipelines, Chroma vector store search, grounded LLM answers, stateful conversation persistence, SSE token streaming, and pixel-perfect enterprise frontend dashboard.
 - [ ] **Milestone 3: Agentic RAG (v0.3.0)** - Multi-agent routing logic using LangGraph, tool execution systems, memory preservation across active sessions, and streaming.
 - [ ] **Milestone 4: Production Release (v1.0.0)** - Redis cache locks, User JWT Authentication, logging monitors, secure deployment configurations, and automated staging test suites.
-
----
-
-## Screenshots
-
-*(Screenshots will be added as UI development progresses)*
