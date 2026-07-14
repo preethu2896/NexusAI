@@ -93,3 +93,30 @@ A mathematical metric that measures the cosine of the angle between two vectors.
 ### ANN (Approximate Nearest Neighbour)
 A class of search algorithms optimized for high-dimensional vector spaces. Sacrifices perfect recall accuracy to query millions of vectors in milliseconds (logarithmic or constant scale), which is essential for real-time production RAG pipelines.
 
+### LLM (Large Language Model)
+A neural network trained on massive text corpora to model the probability distribution of text sequences, enabling next-token prediction, reasoning, translation, and structured output generation.
+
+### Transformer
+The deep learning architecture utilizing self-attention mechanisms to process text sequences in parallel, serving as the structural foundation of modern LLMs.
+
+### Self-Attention
+A mechanism inside Transformers that dynamically calculates relationships and weights between all tokens in a sequence, updating each token's vector representation with contextual information.
+
+### Token
+A numerical value representing a sub-word character fragment, serving as the base input/output unit of an LLM.
+
+### Context Window
+The maximum token budget an LLM can process in a single inference cycle (comprising both the input prompt and the generated response).
+
+### System Prompt
+An instructional template injected before the user's query that sets the model's persona, constraints, formatting rules, and output boundaries.
+
+### Grounding
+The engineering constraint that restricts an LLM's response to rely strictly and factively on retrieved source documents, preventing hallucinations.
+
+### Hallucination
+An error state where an LLM generates syntactically convincing but factually incorrect or unsupported statements.
+
+### Token Budgeting
+The program logic that calculates and limits the size of prompt components (e.g. system guidelines, retrieved context, user query) to fit within an LLM's context window.
+

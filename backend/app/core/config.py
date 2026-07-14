@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL_NAME: str = Field(default="all-MiniLM-L6-v2")
     EMBEDDING_BATCH_SIZE: int = Field(default=32)
 
+    # OpenAI and LLM Generation Settings (Sprint C)
+    OPENAI_API_KEY: str = Field(default="")
+    LLM_MODEL_NAME: str = Field(default="gpt-4o-mini")
+    LLM_TEMPERATURE: float = Field(default=0.0)
+    LLM_MAX_TOKENS: int = Field(default=1024)
+
     # Configuration metadata for Pydantic Settings
     # This instructs Pydantic to read from a .env file located in the parent directory
     model_config = SettingsConfigDict(

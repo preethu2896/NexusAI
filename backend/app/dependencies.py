@@ -19,16 +19,20 @@ from backend.app.ports.extractor import IDocumentExtractor
 from backend.app.ports.chunker import ITextChunker
 from backend.app.ports.embedding import IEmbeddingModel
 from backend.app.ports.vector_store import IVectorStore
+from backend.app.ports.llm_client import ILLMClient
 
-# Concrete implementations (Sprint A & B)
+# Concrete implementations (Sprint A & B & C)
 from backend.app.ingestion.storage.local_storage import LocalFileStorage
 from backend.app.ingestion.extractors.pdf_extractor import PdfExtractor
 from backend.app.ingestion.chunkers.recursive_chunker import RecursiveChunker
 from backend.app.embeddings import LocalEmbeddingModel, ChromaVectorStore
+from backend.app.llm.openai_client import OpenAILLMClient
 
 # Layers
 from backend.app.repositories.document_repository import DocumentRepository
 from backend.app.services.document_service import DocumentService
+from backend.app.generation.rag_generator import RAGGenerator
+from backend.app.services.chat_service import ChatService
 
 
 # ---------------------------------------------------------------------------
@@ -118,5 +122,38 @@ def get_document_service(
         chunker=chunker,
         embedding_model=embedding_model,
         vector_store=vector_store,
+    )
+
+
+# Cache singleton for LLM client to reuse the HTTP pool
+_llm_client: ILLMClient | None = None
+
+
+def get_llm_client() -> ILLMClient:
+    """
+    Provide the active LLM client singleton.
+    """
+    global _llm_client
+    if _llm_client is None:
+        _llm_client = OpenAILLMClient(
+            api_key=settings.OPENAI_API_KEY,
+            model_name=settings.LLM_MODEL_NAME,
+            temperature=settings.LLM_TEMPERATURE,
+            max_tokens=settings.LLM_MAX_TOKENS,
+        )
+    return _llm_client
+
+
+def get_chat_service(
+    document_service: DocumentService = Depends(get_document_service),
+    llm_client: ILLMClient = Depends(get_llm_client),
+) -> ChatService:
+    """
+    Assemble and provide ChatService, injecting DocumentService and RAGGenerator.
+    """
+    rag_generator = RAGGenerator(llm_client=llm_client)
+    return ChatService(
+        document_service=document_service,
+        rag_generator=rag_generator,
     )
 

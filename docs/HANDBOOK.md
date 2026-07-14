@@ -1010,3 +1010,73 @@ Without recording which model produced each embedding, you cannot detect incompa
 
 ### 5. Not Using Metadata Filtering
 Searching across all chunks when the user is querying a specific document is wasteful and returns results from unrelated documents. Always filter by `document_id` (or user scope) in the `where` clause.
+
+---
+
+## Part 6 — Large Language Models & Retrieval-Augmented Generation (RAG) (Sprint C)
+
+### Dynamic RAG Generation Lifecycle
+In the Retrieval phase (Sprint B), we mapped the user's question to a dense vector, performed an ANN similarity search on ChromaDB, and retrieved the top-K relevant text chunks.
+In the Generation phase (Sprint C), we combine these retrieved context chunks and the user's question into a structured prompt, feed it to the Large Language Model, and return a factually grounded answer with citations.
+
+The data flow is structured as follows:
+```
+[User Query] + [Top-K Relevant Chunks (with page markers)]
+      │
+      ▼
+┌──────────────┐
+│Prompt Builder│ ──► Truncates context dynamically to fit token budget (using tiktoken)
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│  LLM Client  │ ──► gpt-4o-mini (temperature=0.0)
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│RAG Generator │ ──► Grounded response string
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ Chat Service │ ──► Parsed unique citations list [e.g. 2, 4] + latency tracking
+└──────────────┘
+```
+
+### Prompt Engineering and Constraints
+To guarantee that the LLM does not hallucinate, we use a rigid `RAG_SYSTEM_PROMPT` containing specific rules:
+1. **Factual Grounding**: The LLM must answer using only the provided context. If the context does not contain the answer, it must output exactly: `"I don't know based on the provided documents."`
+2. **Conciseness**: Answers must be factual and clear, avoiding verbose explanations.
+3. **Citation Formatting**: Whenever the model relies on a fact, it must append `[Page X]` referencing the page number header.
+
+### Context Budgeting & Truncation
+To prevent token window overflow, the `PromptBuilder` uses the `tiktoken` library (or character heuristic fallback) to calculate prompt length. If the combined token count of the system prompt, context chunks, and user query exceeds the `max_context_tokens` ceiling, lower-ranked chunks are excluded dynamically to preserve the token budget.
+
+### Citation Parsing
+When the response is returned from the LLM, the `ChatService` scans the text response using regular expressions (`\[Page (\d+)\]`) to find all unique page citations and returns them in the response metadata as `citations`.
+
+---
+
+## Part 6 Performance Discussion
+
+### 1. Context Window vs. Cost
+- Modern models like `gpt-4o-mini` support massive context windows (128K tokens), but the cost scales linearly with the input length. 
+- In addition, latency scales with the prompt size because the self-attention mechanism must attend over the entire context. Keeping $K$ constrained (e.g. $K=5$, approximately 2000 tokens) is optimal for speed and cost.
+
+### 2. Output Token Latency
+- LLMs generate tokens auto-regressively (one token at a time). Generation speed is model-dependent: `gpt-4o-mini` generates at roughly 80-100 tokens per second.
+- Capping `max_tokens` (e.g. 1024 tokens) prevents excessive costs and protects against endless generation loops.
+
+---
+
+## Part 6 Production Best Practices
+
+### 1. Multi-Model Fallbacks
+Implement error handling in the adapter. If the primary API provider is down or rate-limited, catch the exception and redirect the call to a secondary model (e.g. a local Ollama instance or Anthropic's Claude API).
+
+### 2. Input caching
+Reusing the exact system prompt prefix allows the API provider to cache the prompt, reducing costs by up to 50% and retrieval latency by up to 2x.
+
+### 3. Parse and Validate citations
+Always double-check that the pages cited by the LLM are actually in the list of pages supplied in the context. This prevents the model from hallucinating citation markers.
