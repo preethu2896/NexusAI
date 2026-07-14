@@ -547,5 +547,466 @@ Accessing `document.chunks` without pre-loading raises `MissingGreenlet` in asyn
 - *Wrong*: `doc = await session.get(Document, id); count = len(doc.chunks)`
 - *Right*: `select(Document).options(selectinload(Document.chunks))`
 
-### 3. Hardcoding Chunk Size
 Setting chunk size as a constant means redeployment is required to tune it. Load from environment-configurable `Settings` so operations teams can adjust without code changes.
+
+---
+---
+
+# Chapter 4: Embeddings, Vector Mathematics & Vector Databases
+
+> **Sprint B — Semantic Search Engine | Milestone: v0.2.0 MVP**
+
+---
+
+## Part 1 — Embeddings
+
+---
+
+### What is an Embedding?
+
+#### ELI5
+Imagine you have a giant library with millions of books. If someone asks you "find me books about dogs," you cannot check every book. But what if every book had a GPS coordinate? Books about dogs would be near each other. Books about cats would be nearby too. Books about finance would be far away. An **embedding** is that GPS coordinate — a list of numbers that tells you where a piece of text lives in meaning-space.
+
+#### Real-World Analogy
+A colour can be described as three numbers: `(R, G, B)`. Red is `(255, 0, 0)`. Pink is `(255, 182, 193)`. They are numerically close because they are semantically related. Embeddings do the same for *words and sentences* — encode meaning as numbers so similar meanings produce numerically similar coordinates.
+
+#### ASCII Diagram
+```
+  Text Input        Neural Network          Embedding Vector
+ ─────────────   ──────────────────────   ───────────────────
+"The dog runs"  →  [Transformer Encoder]  →  [0.21, -0.44, 0.88, ..., 0.12]
+                                              ↑        1536 numbers ↑
+"A puppy jogs"  →  [Transformer Encoder]  →  [0.20, -0.43, 0.87, ..., 0.11]
+                                              (Very close! Same meaning)
+
+"Stock markets" →  [Transformer Encoder]  →  [-0.91, 0.33, -0.07, ..., 0.67]
+                                              (Far away! Different topic)
+```
+
+#### Technical Explanation
+An embedding model is a neural network (typically a Transformer) trained to map any input text to a fixed-size dense vector in a high-dimensional space. The training objective ensures that **semantically similar texts are close together** in this space (small distance between their vectors) and semantically different texts are far apart.
+
+The training process uses **contrastive learning**: pairs of similar sentences are pulled together in vector space, and dissimilar pairs are pushed apart. This is why `"The dog runs"` and `"A puppy jogs"` end up with nearly identical coordinates even though they share no words.
+
+#### Why Can Text Be Represented as Numbers?
+Text is discrete (words are symbols). But meaning is continuous and relational. A transformer model learns to encode the full *context* of a word — not just its identity but its relationships with surrounding words. By training on billions of documents, the model discovers that `dog` and `puppy` appear in similar contexts (they are described the same way, do the same things, appear alongside the same other words), and so they end up in similar positions in the vector space.
+
+#### Dense vs Sparse Representations
+
+| Feature | Sparse (TF-IDF, BM25) | Dense (Embeddings) |
+| :--- | :--- | :--- |
+| Representation | Very long vector, mostly zeros | Short dense vector, all values non-zero |
+| Example | `[0, 0, 1, 0, 0, 3, 0, ...]` (one dim per word) | `[0.21, -0.44, 0.88, ...]` (fixed 768 dims) |
+| Captures semantics | No — only exact word matches | Yes — similar meaning = similar vector |
+| Captures synonyms | No — "dog" ≠ "puppy" | Yes — "dog" ≈ "puppy" |
+| Storage | Large (vocabulary size) | Small (fixed dimension) |
+| Used in | BM25 keyword search | Semantic search, RAG |
+
+#### Embedding Dimensions
+The vector size is a model design choice:
+```
+Model                        Dimensions   Notes
+─────────────────────────────────────────────────────────
+all-MiniLM-L6-v2 (local)         384    Fast, small, good quality
+all-mpnet-base-v2 (local)         768    Better quality, 2× larger
+BAAI/bge-base-en-v1.5             768    Top open-source model
+OpenAI text-embedding-3-small    1536    API, high quality
+OpenAI text-embedding-3-large    3072    API, highest quality
+```
+More dimensions → more expressive space → better quality → higher storage cost. For MVP, 384 dimensions with `all-MiniLM-L6-v2` gives excellent quality with fast local inference.
+
+---
+
+### Sentence Transformers vs OpenAI Embeddings
+
+| | Sentence Transformers (Local) | OpenAI API |
+| :--- | :--- | :--- |
+| Cost | Free (compute only) | $0.02 per 1M tokens |
+| Privacy | Data stays local | Data sent to OpenAI |
+| Speed | 50–300ms per batch (CPU) | 200–500ms per call |
+| Quality | Very good (MTEB benchmark) | Best in class |
+| Internet required | No | Yes |
+| Offline capable | Yes | No |
+
+**MVP choice**: `sentence-transformers` with `all-MiniLM-L6-v2` — free, local, no API key, fast enough for development. Swappable to OpenAI via `IEmbeddingModel` in `dependencies.py`.
+
+---
+
+## Part 2 — Vector Mathematics
+
+---
+
+### Vectors
+A vector is an ordered list of numbers: `v = [0.21, -0.44, 0.88]`. In embedding space, each dimension captures some latent semantic feature (not directly interpretable, but learned during training). Two vectors are compared using a **distance or similarity metric**.
+
+```
+               ↑ dim2
+               │
+   "puppy" •──────────────────────────────
+               │      ↗ nearby
+   "dog"   •──────── ↗
+               │
+               │                  • "stock market"  (far away)
+               └────────────────────────────────→ dim1
+```
+
+### Cosine Similarity
+```
+                   A · B
+  cos(θ) = ─────────────────
+             ‖A‖ × ‖B‖
+
+Where:
+  A · B  = dot product (sum of element-wise products)
+  ‖A‖    = magnitude (Euclidean length) of vector A
+  ‖B‖    = magnitude (Euclidean length) of vector B
+
+Result range: [-1, 1]
+  1.0  = identical direction (semantically identical)
+  0.0  = perpendicular (unrelated)
+ -1.0  = opposite direction (antonyms)
+```
+
+**Example:**
+```
+A = [1, 0, 1]      (embedding for "dog")
+B = [0.9, 0.1, 0.9] (embedding for "puppy")
+C = [-0.9, 0.1, -0.9] (embedding for "antonym of dog")
+
+cos(A, B) = (0.9 + 0 + 0.9) / (√2 × √(0.81+0.01+0.81)) ≈ 0.99  ← very similar
+cos(A, C) = (-0.9 + 0 - 0.9) / (√2 × √(...))             ≈ -0.99 ← opposite
+```
+
+### Why Cosine Similarity is Preferred Over Euclidean Distance
+```
+Euclidean distance measures absolute position.
+Cosine similarity measures angular direction.
+
+Problem with Euclidean in high dimensions:
+  A "dog" sentence: [0.21, -0.44, 0.88, ...]     ← short document
+  B "dog" sentence: [0.42, -0.88, 1.76, ...]     ← long document (twice as long)
+
+  Euclidean distance: LARGE (they look far apart)
+  Cosine similarity:  1.0  (same direction = same meaning)
+
+Cosine similarity is SCALE-INVARIANT — long and short documents about the
+same topic compare correctly, because it only measures angle, not magnitude.
+```
+
+### Vector Normalization
+When vectors are L2-normalized (each vector divided by its magnitude so `‖v‖ = 1`), cosine similarity becomes equivalent to the dot product:
+```
+  cos(A, B) = A · B      (when ‖A‖ = ‖B‖ = 1)
+```
+This is significant: most vector databases (including ChromaDB) normalize vectors and then use fast dot product operations instead of the full cosine formula, making search much faster.
+
+---
+
+## Part 3 — Vector Databases
+
+---
+
+### Why SQL Databases Are Inefficient for Semantic Search
+
+#### ELI5
+A traditional database is like a dictionary — it can find "dog" instantly because it knows exactly where "dog" is alphabetically. But if you ask "find me words that mean something like dog," the dictionary cannot help — it has no concept of meaning similarity.
+
+A vector database is like a library organized by *topic*. All the animal books are in one area, all the finance books in another. You walk to the "animal" area, and everything nearby is relevant.
+
+#### The SQL Problem
+```sql
+-- This only finds EXACT matches. "puppy" and "canine" would not appear.
+SELECT * FROM chunks WHERE content LIKE '%dog%';
+
+-- Even this fails for semantic similarity:
+-- "The Labrador fetched the ball" matches "dog" concepts but contains no keyword.
+```
+
+SQL uses B-tree or hash indexes — both are designed for **exact match** or **range queries** on ordered data. They have no concept of similarity in high-dimensional space.
+
+### Exact Search vs Approximate Nearest Neighbour (ANN)
+
+**Exact KNN (k-Nearest Neighbours):**
+- Compute distance from query to EVERY vector in the database
+- Return the k smallest distances
+- Time complexity: `O(N × D)` where N = vectors, D = dimensions
+- At 1M vectors × 768 dims: 768 million multiplications per query → 200–500ms
+- **Unusable at scale**
+
+**Approximate Nearest Neighbour (ANN):**
+- Build an index that organises vectors into navigable clusters
+- Search only a small region of the space near the query
+- Time complexity: `O(log N)` — nearly constant regardless of collection size
+- Trade-off: ~5% chance of missing the absolute nearest neighbour
+- At 1M vectors: 2–5ms per query → **production-ready**
+
+### HNSW Index (Hierarchical Navigable Small World)
+
+This is the algorithm that makes modern vector databases fast. It is used by ChromaDB, Qdrant, Weaviate, and pgvector.
+
+```
+HNSW builds a multi-layer graph of vectors:
+
+Layer 2 (sparse):  A ──── C ──── F
+                           │
+Layer 1 (medium):  A ── B ── C ── D ── F
+                               │
+Layer 0 (dense):   A─B─C─D─E─F─G─H─I (all vectors connected to neighbours)
+
+Search algorithm:
+1. Enter at top layer, find the closest node to query Q
+2. Descend to next layer, starting from that node
+3. Greedily traverse to closer neighbours
+4. Repeat until Layer 0, collect top-K results
+
+Result: Finds approximate nearest neighbours in O(log N) time
+```
+
+**Why it works**: It's inspired by the "six degrees of separation" concept — any node is reachable from any other node in a small number of hops via well-connected "hub" nodes at higher layers.
+
+---
+
+## Part 4 — ChromaDB
+
+---
+
+### What is ChromaDB?
+
+#### ELI5
+ChromaDB is like a filing cabinet specifically designed to store GPS coordinates (vectors) alongside the original documents they represent. When you ask "find documents near this coordinate," ChromaDB can search through millions of coordinates in milliseconds and hand you back the original documents.
+
+#### Internal Architecture
+```
+ChromaDB Instance
+│
+├── Collections (like SQL tables)
+│   ├── Collection: "nexusai_chunks"
+│   │   ├── Segment: HNSW Vector Index      ← for fast similarity search
+│   │   └── Segment: SQLite Metadata Store  ← for filtering by metadata
+│   └── Collection: "nexusai_other"
+│
+├── Persistence Layer
+│   ├── DuckDB (metadata + IDs)             ← local persistence
+│   └── HNSW files (vector data)            ← binary index files
+│
+└── API Layer
+    ├── Python client (used directly in-process)
+    └── HTTP server mode (for multi-process access)
+```
+
+### ChromaDB Core Concepts
+
+**Collection**: A named namespace of vectors. Equivalent to a table. Each collection has its own HNSW index.
+```python
+collection = client.get_or_create_collection("nexusai_chunks")
+```
+
+**Document ID**: Every vector has a unique string ID. In NexusAI, this is the chunk UUID as a string.
+
+**Embedding**: The actual float vector stored and indexed.
+
+**Metadata**: A flat JSON dict stored alongside the vector. Supports equality and range filter on queries.
+```python
+metadata = {
+    "document_id": "3fa85f64-...",
+    "chunk_index": 7,
+    "page_number": 3,
+    "filename": "security-policy.pdf"
+}
+```
+
+**Document text**: ChromaDB can also store the original text. We store it here so queries return the chunk text directly without a PostgreSQL round-trip.
+
+### ChromaDB Query Lifecycle
+```
+query_embeddings=[[0.21, -0.44, ...]]
+query_where={"document_id": "3fa85f64-..."}
+n_results=5
+           │
+           ▼
+┌──────────────────────────────────┐
+│ 1. Apply metadata pre-filter     │ ← SQLite WHERE query
+│    WHERE document_id = '...'     │    narrows candidate set
+└──────────────────┬───────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────┐
+│ 2. HNSW ANN search on candidates │ ← searches HNSW graph
+│    find top-5 nearest vectors    │    returns approximate KNN
+└──────────────────┬───────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────┐
+│ 3. Return results with distances │ ← cosine distances
+│    ids, documents, metadatas     │
+└──────────────────────────────────┘
+```
+
+### Storage Layout (Local Persistence)
+```
+chroma_db/                          ← CHROMA_PERSIST_DIR setting
+├── chroma.sqlite3                  ← metadata, IDs, embeddings table
+└── {uuid}/
+    ├── header.bin                  ← HNSW index config
+    ├── data_level0.bin             ← Layer 0 graph (all vectors)
+    └── link_lists.bin              ← Higher layer links
+```
+
+---
+
+## Part 5 — Full Pipeline Architecture (Sprint B)
+
+```
+                     SPRINT A (already built)
+  PDF Upload
+      │
+      ▼
+  PdfExtractor → RecursiveChunker → PostgreSQL (document_chunks)
+                                          │
+                                ─ ─ ─ ─ ─ ┘ (Sprint B picks up here)
+                     SPRINT B
+      │
+      ▼
+  POST /documents/{id}/index
+      │
+      ▼
+  ┌────────────────────────────┐
+  │   RetrievalService         │
+  │   .index_document()        │
+  └──────────┬─────────────────┘
+             │
+             ├──► EmbeddingRepository.get_chunks(document_id)
+             │         (read from PostgreSQL)
+             │
+             ├──► IEmbeddingModel.embed(texts)
+             │         SentenceTransformerEmbedding
+             │         input:  ["chunk 1 text", "chunk 2 text", ...]
+             │         output: [[0.21, ...], [0.44, ...], ...]
+             │
+             ├──► IVectorStore.upsert(collection, ids, vectors, metadatas)
+             │         ChromaVectorStore
+             │         stores vectors + metadata in ChromaDB
+             │
+             └──► EmbeddingRepository.mark_embedded(chunk_ids, model)
+                       (update embedding_metadata in PostgreSQL)
+
+  POST /api/v1/search
+      │
+      ▼
+  ┌────────────────────────────┐
+  │   RetrievalService         │
+  │   .search(query, top_k)    │
+  └──────────┬─────────────────┘
+             │
+             ├──► IEmbeddingModel.embed([query_text])
+             │         converts query to vector
+             │
+             └──► IVectorStore.query(collection, vector, top_k)
+                       ChromaVectorStore
+                       returns: ids, distances, metadatas, documents
+                       (ranked by cosine similarity — most relevant first)
+```
+
+---
+
+## Performance Discussion
+
+### Embedding Generation Cost
+- `all-MiniLM-L6-v2` on CPU: ~50ms for 32 chunks in a batch
+- Batching is critical: embedding 1 chunk at a time = 100ms each; 32 chunks at once = 1.5ms each
+- For a 100-page PDF (≈200 chunks), total embedding time on CPU: ~5–10 seconds
+- In production (GPU): <1 second for the same 200 chunks
+
+### Storage Requirements
+- 384 dimensions × 4 bytes/float = 1,536 bytes per vector
+- 1 million chunks = 1.5 GB vector storage
+- ChromaDB also stores metadata + text: add 0.5–1 KB per chunk
+- 1 million chunks total: approximately 2–3 GB
+
+### Search Complexity
+- Exact KNN at 1M vectors: ~500ms
+- HNSW ANN at 1M vectors: ~2–5ms
+- HNSW ANN at 10M vectors: ~5–15ms (nearly linear growth in log scale)
+
+---
+
+## Production Best Practices
+
+### 1. Model Versioning
+Never silently change the embedding model. If you embed with Model A and search with Model B, the vectors are in incompatible spaces — similarity scores are meaningless. Always store `model_name` in `embedding_metadata` and prevent mixing.
+
+### 2. Embedding Drift & Re-indexing
+When you upgrade the embedding model, you must re-embed every chunk. Design for this from the start: the `EmbeddingRepository.mark_embedded()` records which model embedded each chunk, enabling targeted re-indexing (`WHERE model_name = 'old-model'`).
+
+### 3. Batch Embedding
+Always embed in batches. Typical batch sizes: 32–256 chunks. This is 10–100× faster than embedding one at a time.
+
+### 4. Collection Design
+- **One collection per application**: simple, but cannot filter by user
+- **One collection per document**: clean isolation, expensive to scale
+- **One shared collection with metadata filters**: scalable, requires careful metadata design
+
+NexusAI MVP uses one shared collection `nexusai_chunks` with document-level metadata filtering.
+
+### 5. Metadata Filtering
+ChromaDB supports `where` filters on any stored metadata field:
+```python
+results = collection.query(
+    query_embeddings=[...],
+    where={"document_id": "3fa85f64-..."},  # restrict to one document
+    n_results=5
+)
+```
+Plan metadata schema carefully — you cannot add new filterable fields to existing vectors without re-inserting them.
+
+---
+
+## Interview Questions
+
+### Beginner
+1. **What is an embedding?** A fixed-size numerical vector that represents the semantic meaning of a text, where similar meanings produce numerically similar vectors.
+2. **Why can't SQL `LIKE` find semantically similar text?** SQL LIKE does exact string pattern matching. It has no concept of semantic similarity — "dog" and "puppy" match nothing in common.
+3. **What is cosine similarity?** A measure of the angle between two vectors. Returns 1.0 for identical direction, 0 for perpendicular, -1 for opposite. Used in semantic search because it is scale-invariant.
+4. **What is a vector database?** A specialized database designed to store high-dimensional vectors and perform fast approximate nearest-neighbour similarity searches.
+5. **What is a collection in ChromaDB?** A named namespace of vectors, equivalent to a table. Has its own HNSW index and metadata store.
+
+### Intermediate
+1. **Why is cosine similarity preferred over Euclidean distance for text embeddings?** Cosine similarity is scale-invariant. Long and short documents about the same topic produce vectors in the same direction but different magnitudes. Cosine similarity correctly identifies them as similar; Euclidean distance would penalize the length difference.
+2. **What is the difference between exact KNN and ANN?** Exact KNN scans every vector (O(N×D)), guaranteeing the true nearest neighbours. ANN (e.g., HNSW) builds an index for O(log N) search with a small approximation error (~5% miss rate). ANN is production-necessary at scale.
+3. **What is HNSW and why does it work?** Hierarchical Navigable Small World — a multi-layer graph index. Upper layers are sparse (long-range connections), lower layers are dense (short-range). Search starts at top, descends greedily. Works because of the "small world" property: any vector is reachable from any other in O(log N) hops.
+4. **What happens if you embed with one model and search with another?** The results are garbage. Each model produces vectors in its own learned coordinate space. Mixing models is like measuring distances in miles on one map and kilometres on another.
+5. **What is embedding drift and how do you handle it?** Over time, upgrading the embedding model causes stored vectors (old model) to be incompatible with new query vectors. Handle it by: storing model name with each vector, detecting version mismatches, and running full re-indexing jobs when upgrading models.
+
+### Senior
+1. **How would you design a multi-tenant vector search system where users cannot see each other's documents?** Options: (a) separate ChromaDB collections per tenant (expensive), (b) single collection with `user_id` metadata filter on every query (scalable), or (c) namespace-aware vector store like Qdrant with payload filters. The metadata filter approach scales to millions of documents but requires the filter to be applied at the HNSW pre-filter stage for performance.
+2. **How would you handle the cold start problem when re-embedding millions of chunks after a model upgrade?** Design a background re-indexing job: (1) create a new ChromaDB collection for the new model, (2) batch-embed all chunks in parallel workers (Celery), (3) dual-write to both collections during transition, (4) switch traffic to new collection atomically, (5) delete old collection.
+3. **Compare ChromaDB, pgvector, and Qdrant for a production RAG system at 100M documents.** ChromaDB: excellent for development/small scale, embedded mode does not scale horizontally. pgvector: integrates with existing PostgreSQL, no additional infra, but HNSW is single-server. Qdrant: purpose-built, distributed, supports sharding across nodes, recommended for 100M+ scale with production SLAs.
+4. **What is the ANN recall-speed tradeoff and how do you tune it in HNSW?** HNSW has parameters `ef` (search beam width) and `ef_construction` (index build beam width). Higher `ef` = more candidates examined = higher recall = slower search. For production RAG: `ef=200` gives 98%+ recall at 5–10ms latency. For real-time: `ef=64` gives 95% recall at 2ms.
+5. **Why might dense retrieval alone be insufficient and what hybrid approach would you recommend?** Dense retrieval misses exact keyword matches (e.g., product codes, names, acronyms). Sparse retrieval (BM25) excels at exact matching but misses semantic meaning. **Hybrid retrieval** — combine dense cosine similarity scores with BM25 scores using RRF (Reciprocal Rank Fusion) — achieves best of both. This is implemented in Sprint v0.3.0 (Agentic Upgrade).
+
+---
+
+## Common Mistakes
+
+### 1. Not Normalising Vectors Before Dot Product Search
+If your vector store uses dot product (not cosine), unnormalized vectors give wrong similarity scores — longer documents score higher regardless of relevance. Always normalize before storing or use a vector store that normalizes internally (ChromaDB does this by default for cosine).
+
+### 2. Embedding One Chunk at a Time
+```python
+# Wrong — 200 sequential API calls:
+for chunk in chunks:
+    embed(chunk.text)
+
+# Right — one batched call:
+embed([chunk.text for chunk in chunks])
+```
+Batching is 10–100× faster due to GPU parallelism and reduced API round-trips.
+
+### 3. Storing Embeddings Without Model Metadata
+Without recording which model produced each embedding, you cannot detect incompatible vectors after a model upgrade. Always store `model_name` and `vector_dimension` in `embedding_metadata`.
+
+### 4. Using ChromaDB in Ephemeral Mode in Production
+`chromadb.Client()` (no persist path) stores data in memory only — lost on restart. Always use `chromadb.PersistentClient(path=settings.CHROMA_PERSIST_DIR)`.
+
+### 5. Not Using Metadata Filtering
+Searching across all chunks when the user is querying a specific document is wasteful and returns results from unrelated documents. Always filter by `document_id` (or user scope) in the `where` clause.

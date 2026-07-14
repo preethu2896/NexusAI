@@ -61,6 +61,18 @@ class DocumentDeleteResponse(BaseModel):
     deleted: bool
 
 
+class ChunkSearchResponse(BaseModel):
+    """
+    Semantic search result chunk.
+    """
+    chunk_id: uuid.UUID = Field(..., description="Unique identifier of the matching text chunk.")
+    content: str = Field(..., description="Text content of the chunk.")
+    page_number: int | None = Field(None, description="Source page number in the original document.")
+    score: float = Field(..., description="Similarity distance score (lower is more similar).")
+
+    model_config = {"from_attributes": True}
+
+
 # ---------------------------------------------------------------------------
 # API envelope wrappers
 # ---------------------------------------------------------------------------

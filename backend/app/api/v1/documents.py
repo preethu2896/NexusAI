@@ -126,3 +126,29 @@ async def delete_document(
     """Delete a document, its chunks, and its stored file."""
     result = await service.delete_document(document_id)
     return {"success": True, "data": result.model_dump(mode="json"), "error": None}
+
+
+@router.get(
+    "/documents/{document_id}/search",
+    status_code=status.HTTP_200_OK,
+    summary="Semantic search within a document",
+    description=(
+        "Perform semantic search within a single indexed document using a text query. "
+        "Returns a list of matching chunks sorted by similarity (distance score)."
+    ),
+    tags=["documents"],
+)
+async def search_document(
+    document_id: uuid.UUID,
+    query: str = Query(..., description="The search terms or question."),
+    limit: int = Query(5, ge=1, le=50, description="Maximum number of search results to return."),
+    service: DocumentService = Depends(get_document_service),
+):
+    """Perform semantic search within a document."""
+    results = await service.search_document(document_id=document_id, query_text=query, limit=limit)
+    return {
+        "success": True,
+        "data": [res.model_dump(mode="json") for res in results],
+        "error": None,
+    }
+

@@ -12,14 +12,19 @@ import uuid
 import logging
 from fastapi import HTTPException, status
 
+from backend.app.core.config import settings
 from backend.app.ports.storage import IFileStorage
 from backend.app.ports.extractor import IDocumentExtractor
 from backend.app.ports.chunker import ITextChunker
+from backend.app.ports.embedding import IEmbeddingModel
+from backend.app.ports.vector_store import IVectorStore
+from backend.app.models.document import EmbeddingMetadata
 from backend.app.repositories.document_repository import DocumentRepository
 from backend.app.schemas.document import (
     DocumentResponse,
     DocumentListResponse,
     DocumentDeleteResponse,
+    ChunkSearchResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -42,11 +47,15 @@ class DocumentService:
         storage: IFileStorage,
         extractor: IDocumentExtractor,
         chunker: ITextChunker,
+        embedding_model: IEmbeddingModel,
+        vector_store: IVectorStore,
     ) -> None:
         self._repo = repo
         self._storage = storage
         self._extractor = extractor
         self._chunker = chunker
+        self._embedding_model = embedding_model
+        self._vector_store = vector_store
 
     # ------------------------------------------------------------------
     # Ingest
@@ -142,7 +151,46 @@ class DocumentService:
                 "Persisting %d chunks for document %s",
                 len(chunks), document.id
             )
-            await self._repo.create_chunks(document.id, chunks)
+            inserted_chunks = await self._repo.create_chunks(document.id, chunks)
+
+            # Step 7.5: Generate embeddings and insert into ChromaDB + save metadata
+            logger.info(
+                "Generating embeddings for %d chunks of document %s using %s",
+                len(inserted_chunks), document.id, self._embedding_model.model_name
+            )
+            chunk_texts = [chunk.content for chunk in inserted_chunks]
+            
+            # Embed texts using the configured batch size
+            batch_size = settings.EMBEDDING_BATCH_SIZE
+            vectors = []
+            for i in range(0, len(chunk_texts), batch_size):
+                batch_texts = chunk_texts[i : i + batch_size]
+                batch_vectors = await self._embedding_model.embed(batch_texts)
+                vectors.extend(batch_vectors)
+
+            # Prepare vectors upsert for ChromaDB
+            chroma_ids = [str(chunk.id) for chunk in inserted_chunks]
+            chroma_metadatas = [{"document_id": str(document.id)} for chunk in inserted_chunks]
+
+            logger.info("Upserting embeddings to ChromaDB collection %s", settings.CHROMA_COLLECTION_NAME)
+            await self._vector_store.upsert(
+                collection=settings.CHROMA_COLLECTION_NAME,
+                ids=chroma_ids,
+                vectors=vectors,
+                metadatas=chroma_metadatas,
+            )
+
+            # Build and insert embedding metadata into PostgreSQL
+            embedding_metadata_list = [
+                EmbeddingMetadata(
+                    chunk_id=chunk.id,
+                    chroma_document_id=str(chunk.id),
+                    vector_dimension=self._embedding_model.dimension,
+                    model_name=self._embedding_model.model_name,
+                )
+                for chunk in inserted_chunks
+            ]
+            await self._repo.create_embedding_metadata(embedding_metadata_list)
 
             # Step 8: Mark as indexed
             await self._repo.update_status(
@@ -227,8 +275,22 @@ class DocumentService:
 
         storage_path = document.storage_path
 
+        # Extract chunk IDs for Chroma cleanup before deleting the document from PostgreSQL
+        chunk_ids = [str(chunk.id) for chunk in document.chunks]
+
         # Delete DB record (chunks cascade automatically)
         await self._repo.delete_document(document)
+
+        # Clean up Chroma vectors
+        if chunk_ids:
+            try:
+                await self._vector_store.delete(
+                    collection=settings.CHROMA_COLLECTION_NAME,
+                    ids=chunk_ids
+                )
+                logger.info("Deleted %d vectors from ChromaDB for document %s", len(chunk_ids), document_id)
+            except Exception as exc:
+                logger.exception("Failed to delete vectors from ChromaDB for document %s: %s", document_id, exc)
 
         # Best-effort file deletion
         try:
@@ -240,3 +302,73 @@ class DocumentService:
             )
 
         return DocumentDeleteResponse(document_id=document_id, deleted=True)
+
+    # ------------------------------------------------------------------
+    # Search
+    # ------------------------------------------------------------------
+
+    async def search_document(
+        self,
+        document_id: uuid.UUID,
+        query_text: str,
+        limit: int = 5,
+    ) -> list[ChunkSearchResponse]:
+        """
+        Perform semantic search within a single document.
+
+        Steps:
+            1. Validate that the document exists and is indexed.
+            2. Generate embedding for query_text.
+            3. Query ChromaDB with document filter.
+            4. Retrieve the matching chunks from PostgreSQL.
+            5. Return search results sorted by similarity.
+        """
+        document = await self._repo.get_by_id(document_id)
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Document {document_id} not found.",
+            )
+
+        if document.processing_status != "indexed":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Document {document_id} is not fully indexed yet (status: {document.processing_status}).",
+            )
+
+        # Generate query embedding
+        query_vectors = await self._embedding_model.embed([query_text])
+        if not query_vectors:
+            return []
+        query_vector = query_vectors[0]
+
+        # Query vector store
+        results = await self._vector_store.query(
+            collection=settings.CHROMA_COLLECTION_NAME,
+            vector=query_vector,
+            top_k=limit,
+            where={"document_id": str(document_id)},
+        )
+
+        if not results:
+            return []
+
+        # Retrieve chunks from PostgreSQL to get original content and page numbers
+        chunk_id_map = {uuid.UUID(res["id"]): res for res in results}
+        chunk_ids = list(chunk_id_map.keys())
+        db_chunks = await self._repo.get_chunks_by_ids(chunk_ids)
+
+        search_results = []
+        for res in results:
+            cid = uuid.UUID(res["id"])
+            matching_chunk = next((c for c in db_chunks if c.id == cid), None)
+            if matching_chunk:
+                search_results.append(
+                    ChunkSearchResponse(
+                        chunk_id=matching_chunk.id,
+                        content=matching_chunk.content,
+                        page_number=matching_chunk.page_number,
+                        score=res["distance"],
+                    )
+                )
+        return search_results

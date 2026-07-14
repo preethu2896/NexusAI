@@ -11,7 +11,7 @@ from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from backend.app.models.document import Document, DocumentChunk
+from backend.app.models.document import Document, DocumentChunk, EmbeddingMetadata
 from backend.app.ports.chunker import ChunkData
 from backend.app.schemas.document import DocumentResponse
 
@@ -71,7 +71,9 @@ class DocumentRepository:
         """
         result = await self._db.execute(
             select(Document)
-            .options(selectinload(Document.chunks))
+            .options(
+                selectinload(Document.chunks).selectinload(DocumentChunk.embedding_metadata)
+            )
             .where(Document.id == document_id)
         )
         return result.scalar_one_or_none()
@@ -143,7 +145,7 @@ class DocumentRepository:
         self,
         document_id: uuid.UUID,
         chunks: list[ChunkData],
-    ) -> None:
+    ) -> list[DocumentChunk]:
         """
         Bulk insert all document chunks in a single transaction.
 
@@ -153,6 +155,9 @@ class DocumentRepository:
         Args:
             document_id: The parent document's UUID.
             chunks: Ordered list of ChunkData from the chunker.
+
+        Returns:
+            The list of created DocumentChunk ORM objects.
         """
         orm_chunks = [
             DocumentChunk(
@@ -168,6 +173,33 @@ class DocumentRepository:
         ]
         self._db.add_all(orm_chunks)
         await self._db.commit()
+        return orm_chunks
+
+    async def create_embedding_metadata(
+        self,
+        metadata_list: list[EmbeddingMetadata],
+    ) -> None:
+        """
+        Bulk insert embedding metadata records for chunks in a single transaction.
+        """
+        self._db.add_all(metadata_list)
+        await self._db.commit()
+
+    async def get_chunks_by_ids(
+        self,
+        chunk_ids: list[uuid.UUID],
+    ) -> list[DocumentChunk]:
+        """
+        Fetch a list of document chunks by their UUIDs, eagerly loading their parent document.
+        """
+        if not chunk_ids:
+            return []
+        result = await self._db.execute(
+            select(DocumentChunk)
+            .options(selectinload(DocumentChunk.document))
+            .where(DocumentChunk.id.in_(chunk_ids))
+        )
+        return list(result.scalars().all())
 
     # ------------------------------------------------------------------
     # Schema conversion helpers

@@ -26,6 +26,16 @@ class Settings(BaseSettings):
     CHUNK_SIZE: int = Field(default=2000)
     CHUNK_OVERLAP: int = Field(default=200)
 
+    # ChromaDB — vector store for semantic search (Sprint B)
+    # In v0.4.0, this is compared against pgvector as an alternative implementation
+    CHROMA_PERSIST_DIR: str = Field(default="chroma_db")
+    CHROMA_COLLECTION_NAME: str = Field(default="nexusai_chunks")
+
+    # Embedding model settings (Sprint B)
+    # Model is read from config so swapping Local→OpenAI requires only an env change
+    EMBEDDING_MODEL_NAME: str = Field(default="all-MiniLM-L6-v2")
+    EMBEDDING_BATCH_SIZE: int = Field(default=32)
+
     # Configuration metadata for Pydantic Settings
     # This instructs Pydantic to read from a .env file located in the parent directory
     model_config = SettingsConfigDict(

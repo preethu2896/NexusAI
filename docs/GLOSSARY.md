@@ -73,3 +73,23 @@ A Python asyncio utility that runs a synchronous blocking function in a separate
 
 ### Lifespan Handler
 A FastAPI application lifecycle manager (using `@asynccontextmanager`) that runs initialization logic before the server accepts requests (startup) and cleanup logic after it shuts down (teardown). Replaces the deprecated `@app.on_event` decorator.
+
+
+### Vector Embedding
+A fixed-size numerical float array representing the semantic meaning of a text block. Texts with similar meanings produce vectors that are close in high-dimensional coordinate space.
+
+### Vector Database
+A database designed to store high-dimensional vectors and perform fast approximate nearest-neighbour similarity searches. Examples: ChromaDB, pgvector, Qdrant.
+
+### ChromaDB
+An open-source, developer-focused vector database designed for embedding-based search and local RAG prototyping. Supports memory-only and persistent-disk modes.
+
+### HNSW (Hierarchical Navigable Small World)
+A multi-layer graph index structure used by vector databases. Enables fast approximate nearest neighbour (ANN) queries in logarithmic time by building nested graphs of varying connectivity density.
+
+### Cosine Similarity / Distance
+A mathematical metric that measures the cosine of the angle between two vectors. Values range from 1.0 (identical direction) to -1.0 (opposite). Cosine distance is calculated as `1.0 - cosine_similarity`, where lower distance indicates higher semantic similarity.
+
+### ANN (Approximate Nearest Neighbour)
+A class of search algorithms optimized for high-dimensional vector spaces. Sacrifices perfect recall accuracy to query millions of vectors in milliseconds (logarithmic or constant scale), which is essential for real-time production RAG pipelines.
+
