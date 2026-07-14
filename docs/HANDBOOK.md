@@ -1152,3 +1152,56 @@ Implement background cleaning workers to archive or delete conversation logs old
 
 ### 3. Session Isolation
 Ensure that a conversation's messages are only accessible by the authorized owner of that thread by verifying the `user_id` context inside the repository or query filter layer.
+
+---
+
+## Part 8 — Streaming AI Responses with Server-Sent Events (SSE) (Sprint E)
+
+### Real-Time Streaming and SSE
+Rather than buffering complete text payloads on the server, real-time AI platforms push token streams to the browser.
+- **Server-Sent Events (SSE)**: A unidirectional protocol over HTTP that streams text bytes chunk-by-chunk using `Content-Type: text/event-stream`.
+- **Chunked Transfer Encoding**: Pushing dynamic payloads where the final size is unknown. Standardized using `Transfer-Encoding: chunked` header.
+
+### Async Generators and Event Loop Yielding
+FastAPI utilizes Python's async generators and `yield` statements to stream response tokens.
+- Running `async def` functions with `yield` returns an iterator.
+- Pushing chunks to `StreamingResponse` yields control back to the event loop, enabling concurrency without blocking thread workers.
+
+### Dynamic Connection Closure and Task Cancellation
+When a client disconnects (e.g. closes the browser tab), the underlying ASGI server detects the socket closure and raises an `asyncio.CancelledError` inside the active generator task.
+- Developers use `try...except asyncio.CancelledError` blocks to abort the stream gracefully.
+- This prevents incomplete or garbage text queries from being written to the PostgreSQL database if a query is aborted early.
+
+### Structured SSE Event Protocols
+To allow client-side interfaces to parse chunk payloads, events are structured as JSON strings:
+```text
+data: {"type": "token", "content": "According"}
+
+data: {"type": "citation", "page": 2}
+
+data: {"type": "metadata", "model_used": "gpt-4o-mini", "latency_ms": 250.0}
+
+data: {"type": "done"}
+```
+
+---
+
+## Part 8 Performance Discussion
+
+### 1. Time To First Token (TTFT)
+The primary KPI for streaming interfaces. Optimized by:
+- Directing vector store queries to local indices (minimizing retrieval to <10ms).
+- Immediate yielding of first delta tokens before starting PG write operations.
+
+### 2. Backpressure Management
+If the client cannot consume data as fast as it is generated, TCP buffers fill up. An async ASGI engine (like Uvicorn) propagates backpressure, pausing the async generator block until buffers clear, protecting memory from leak drift.
+
+---
+
+## Part 8 Production Best Practices
+
+### 1. Load Balancer Configuration
+Ensure proxy buffering is disabled (e.g., `proxy_buffering off;` in Nginx) and persistent socket timeouts are raised to prevent intermediate nodes from holding or terminating the event stream.
+
+### 2. Keep-Alive Heartbeats
+If an LLM has a long delay between token yields, intermediate networks may close the connection. Yielding empty comment lines (`: keep-alive\n\n`) every 15 seconds prevents timeouts.

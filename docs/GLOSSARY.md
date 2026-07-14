@@ -132,3 +132,15 @@ A binary-encoded JSON format in databases that stores structured citation or met
 ### Offset-based Pagination
 A database query control utilizing `LIMIT` and `OFFSET` clauses to retrieve data in discrete chronological frames, protecting network buffers from massive thread histories.
 
+### Server-Sent Events (SSE)
+A unidirectional real-time data streaming protocol over persistent HTTP connections, delivering payloads as text blocks.
+
+### Chunked Transfer Encoding
+An HTTP/1.1 transmission format where data payloads are sent as a sequence of sized chunks without declaring the total length beforehand.
+
+### Async Generator
+A Python function containing the `yield` statement that yields control back to the event loop between iterations.
+
+### TTFT (Time To First Token)
+The latency duration between query initialization and the delivery of the first character chunk from the generation engine.
+

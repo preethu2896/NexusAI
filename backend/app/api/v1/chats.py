@@ -4,9 +4,11 @@ Chat routes — Presentation layer for the Conversation Management Engine.
 import uuid
 import logging
 from fastapi import APIRouter, Depends, status, Query, HTTPException
+from fastapi.responses import StreamingResponse
 
-from backend.app.dependencies import get_chat_service
+from backend.app.dependencies import get_chat_service, get_streaming_chat_service
 from backend.app.services.chat_service import ChatService
+from backend.app.services.streaming_chat_service import StreamingChatService
 from backend.app.schemas.chat import (
     ChatQueryRequest,
     ConversationCreateRequest,
@@ -188,3 +190,39 @@ async def query_document(
         "data": result.model_dump(mode="json"),
         "error": None,
     }
+
+
+@router.post(
+    "/chats/{conversation_id}/stream",
+    status_code=status.HTTP_200_OK,
+    summary="Stream RAG query response using Server-Sent Events (SSE)",
+    tags=["chats"],
+)
+async def query_document_stream(
+    conversation_id: uuid.UUID,
+    payload: ChatQueryRequest,
+    document_id: uuid.UUID = Query(
+        ..., description="The ID of the document to search."
+    ),
+    service: ChatService = Depends(get_chat_service),
+    stream_service: StreamingChatService = Depends(get_streaming_chat_service),
+):
+    """
+    Query a document and stream real-time tokens back to the user via SSE.
+    """
+    conv = await service.get_conversation(conversation_id)
+    if conv is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Conversation {conversation_id} not found.",
+        )
+
+    return StreamingResponse(
+        stream_service.query_document_stream(
+            conversation_id=conversation_id,
+            document_id=document_id,
+            question=payload.question,
+            top_k=payload.top_k,
+        ),
+        media_type="text/event-stream",
+    )

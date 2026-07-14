@@ -20,13 +20,15 @@ from backend.app.ports.chunker import ITextChunker
 from backend.app.ports.embedding import IEmbeddingModel
 from backend.app.ports.vector_store import IVectorStore
 from backend.app.ports.llm_client import ILLMClient
+from backend.app.ports.streaming_llm import IStreamingLLMClient
 
-# Concrete implementations (Sprint A & B & C)
+# Concrete implementations (Sprint A & B & C & E)
 from backend.app.ingestion.storage.local_storage import LocalFileStorage
 from backend.app.ingestion.extractors.pdf_extractor import PdfExtractor
 from backend.app.ingestion.chunkers.recursive_chunker import RecursiveChunker
 from backend.app.embeddings import LocalEmbeddingModel, ChromaVectorStore
 from backend.app.llm.openai_client import OpenAILLMClient
+from backend.app.llm.openai_stream import OpenAIStreamingClient
 
 # Layers
 from backend.app.repositories.document_repository import DocumentRepository
@@ -35,6 +37,7 @@ from backend.app.repositories.message_repository import MessageRepository
 from backend.app.services.document_service import DocumentService
 from backend.app.generation.rag_generator import RAGGenerator
 from backend.app.services.chat_service import ChatService
+from backend.app.services.streaming_chat_service import StreamingChatService
 
 
 # ---------------------------------------------------------------------------
@@ -161,6 +164,44 @@ def get_chat_service(
     return ChatService(
         document_service=document_service,
         rag_generator=rag_generator,
+        conversation_repo=conversation_repo,
+        message_repo=message_repo,
+    )
+
+
+# Cache singleton for streaming LLM client to reuse the HTTP pool
+_streaming_llm_client: IStreamingLLMClient | None = None
+
+
+def get_streaming_llm_client() -> IStreamingLLMClient:
+    """
+    Provide the active streaming LLM client singleton.
+    """
+    global _streaming_llm_client
+    if _streaming_llm_client is None:
+        _streaming_llm_client = OpenAIStreamingClient(
+            api_key=settings.OPENAI_API_KEY,
+            model_name=settings.LLM_MODEL_NAME,
+            temperature=settings.LLM_TEMPERATURE,
+            max_tokens=settings.LLM_MAX_TOKENS,
+        )
+    return _streaming_llm_client
+
+
+def get_streaming_chat_service(
+    db: AsyncSession = Depends(get_db),
+    document_service: DocumentService = Depends(get_document_service),
+    llm_client: IStreamingLLMClient = Depends(get_streaming_llm_client),
+) -> StreamingChatService:
+    """
+    Assemble and provide StreamingChatService, injecting DocumentService,
+    IStreamingLLMClient, ConversationRepository, and MessageRepository.
+    """
+    conversation_repo = ConversationRepository(db)
+    message_repo = MessageRepository(db)
+    return StreamingChatService(
+        document_service=document_service,
+        llm_client=llm_client,
         conversation_repo=conversation_repo,
         message_repo=message_repo,
     )
