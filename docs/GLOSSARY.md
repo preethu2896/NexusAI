@@ -120,3 +120,15 @@ An error state where an LLM generates syntactically convincing but factually inc
 ### Token Budgeting
 The program logic that calculates and limits the size of prompt components (e.g. system guidelines, retrieved context, user query) to fit within an LLM's context window.
 
+### Conversation Thread
+An ordered chronological list of user queries and assistant responses grouped under a single context thread identifier.
+
+### Cascade Delete
+A relational database constraint where deleting a parent row (such as a conversation thread) automatically triggers the deletion of all associated child rows (such as message logs).
+
+### SQL JSONB
+A binary-encoded JSON format in databases that stores structured citation or metadata dictionaries directly inside rows while supporting index scanning.
+
+### Offset-based Pagination
+A database query control utilizing `LIMIT` and `OFFSET` clauses to retrieve data in discrete chronological frames, protecting network buffers from massive thread histories.
+

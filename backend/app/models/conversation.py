@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import String, Text, ForeignKey
+from sqlalchemy import String, Text, ForeignKey, JSON, Float
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import List, TYPE_CHECKING
 from backend.app.core.database import Base, TimestampMixin
@@ -62,6 +62,18 @@ class Message(Base, TimestampMixin):
     content: Mapped[str] = mapped_column(
         Text,
         nullable=False
+    )
+    citations: Mapped[list | None] = mapped_column(
+        JSON,
+        nullable=True
+    )
+    model_used: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True
+    )
+    latency_ms: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True
     )
     
     # Relationships

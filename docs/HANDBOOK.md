@@ -1080,3 +1080,75 @@ Reusing the exact system prompt prefix allows the API provider to cache the prom
 
 ### 3. Parse and Validate citations
 Always double-check that the pages cited by the LLM are actually in the list of pages supplied in the context. This prevents the model from hallucinating citation markers.
+
+---
+
+## Part 7 — Conversation Management & Chat Memory (Sprint D)
+
+### Conversation Database Modeling
+AI conversation systems require parent-child relational structures to associate a thread context with individual messages.
+- **`conversations` Table**: The parent thread model containing a system user foreign key, created timestamps, and descriptive titles.
+- **`messages` Table**: The child record containing message payload (`role`, `content`), execution details (`model_used`, `latency_ms`), and structured references.
+
+### Cascading Deletions and Cascade Constraints
+To maintain relational integrity, deleting a conversation thread must automatically remove all child message blocks. This is configured in the database layer via:
+- SQL foreign key definitions: `ON DELETE CASCADE`
+- SQLAlchemy relationships: `cascade="all, delete-orphan"`
+
+Cascade bounds prevent orphaned records from consuming storage space without references.
+
+### Indexing and Scaling Message History
+Reading chat logs requires indexing the foreign key `messages.conversation_id`.
+- Without indexes, fetching history for a thread is an $O(N)$ full table scan, causing latency to degrade linearly as the total messages table size grows.
+- Indexing resolves lookups to $O(\log N)$ B-Tree queries.
+- Sorting must be enforced chronologically using sequence IDs or sequential timestamps (`ORDER BY created_at ASC`).
+
+### Structured Citation Mapping
+RAG systems store citation links natively using `JSON` or `JSONB` database column types rather than parsing raw text strings during read operations.
+- The `ChatService` maps cited pages to their retrieved database counterparts.
+- Structured Citation Schema:
+  ```json
+  {
+    "document_id": "c3e9812a-89a1...",
+    "chunk_id": "89b3f021-cd34...",
+    "page": 2,
+    "score": 0.7257
+  }
+  ```
+This structure preserves traceability, allowing visual frontends to highlight exact matches.
+
+### Pagination Patterns for Chronological Feeds
+Production chat platforms never fetch the complete message list at once. Instead, they use offset-based pagination:
+```python
+query = (
+    select(Message)
+    .where(Message.conversation_id == id)
+    .order_by(Message.created_at.asc())
+    .limit(limit)
+    .offset(offset)
+)
+```
+This protects service layers from memory overload when retrieving long-lived conversation threads.
+
+---
+
+## Part 7 Performance Discussion
+
+### 1. Database Indexing Cost
+While indexes speed up message reads, they add database write overhead. Because every chat query results in 2 writes (1 User question, 1 Assistant response), indexes on `messages.conversation_id` and `messages.created_at` must be pruned of redundant constraints to optimize transaction throughput.
+
+### 2. Transaction Splitting
+For large installations, routing heavy message inserts to primary databases while serving history list queries from read-replicas prevents primary thread lockups.
+
+---
+
+## Part 7 Production Best Practices
+
+### 1. GDPR Right to Be Forgotten
+Under privacy laws, users must be allowed to completely erase their data. Cascade deletion triggers must execute hard-deletes on `messages` and related objects when a user deletes a thread.
+
+### 2. Data Retention Limits
+Implement background cleaning workers to archive or delete conversation logs older than a specified period (e.g. 180 days) to manage database size and data liabilities.
+
+### 3. Session Isolation
+Ensure that a conversation's messages are only accessible by the authorized owner of that thread by verifying the `user_id` context inside the repository or query filter layer.

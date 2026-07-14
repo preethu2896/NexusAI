@@ -30,6 +30,8 @@ from backend.app.llm.openai_client import OpenAILLMClient
 
 # Layers
 from backend.app.repositories.document_repository import DocumentRepository
+from backend.app.repositories.conversation_repository import ConversationRepository
+from backend.app.repositories.message_repository import MessageRepository
 from backend.app.services.document_service import DocumentService
 from backend.app.generation.rag_generator import RAGGenerator
 from backend.app.services.chat_service import ChatService
@@ -145,15 +147,21 @@ def get_llm_client() -> ILLMClient:
 
 
 def get_chat_service(
+    db: AsyncSession = Depends(get_db),
     document_service: DocumentService = Depends(get_document_service),
     llm_client: ILLMClient = Depends(get_llm_client),
 ) -> ChatService:
     """
-    Assemble and provide ChatService, injecting DocumentService and RAGGenerator.
+    Assemble and provide ChatService, injecting DocumentService, RAGGenerator,
+    ConversationRepository, and MessageRepository.
     """
+    conversation_repo = ConversationRepository(db)
+    message_repo = MessageRepository(db)
     rag_generator = RAGGenerator(llm_client=llm_client)
     return ChatService(
         document_service=document_service,
         rag_generator=rag_generator,
+        conversation_repo=conversation_repo,
+        message_repo=message_repo,
     )
 

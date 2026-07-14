@@ -1,6 +1,8 @@
 """
 Chat Pydantic schemas — request validation and response serialization.
 """
+import uuid
+from datetime import datetime
 from pydantic import BaseModel, Field
 from backend.app.schemas.document import ChunkSearchResponse
 
@@ -38,3 +40,45 @@ class ChatQueryResponse(BaseModel):
     latency_ms: float = Field(
         ..., description="Total processing time in milliseconds."
     )
+
+
+class ConversationCreateRequest(BaseModel):
+    """
+    Request schema for creating a new conversation.
+    """
+
+    title: str | None = Field(
+        None, max_length=255, description="Optional title for the conversation thread."
+    )
+
+
+class ConversationResponse(BaseModel):
+    """
+    Response schema for conversation thread metadata.
+    """
+
+    id: uuid.UUID
+    title: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class MessageResponse(BaseModel):
+    """
+    Response schema for individual messages in a thread history.
+    """
+
+    id: uuid.UUID
+    role: str
+    content: str
+    citations: list[dict] | None = None
+    model_used: str | None = None
+    latency_ms: float | None = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
