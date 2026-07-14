@@ -1,0 +1,16 @@
+[project]
+name = "nexusai-backend"
+version = "0.1.0"
+description = "NexusAI Enterprise Agentic RAG Platform Backend"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.1",
+    "sqlalchemy[asyncio]>=2.0.31",
+    "asyncpg>=0.29.0",
+    "pydantic-settings>=2.3.4",
+    "alembic>=1.13.1",
+    "pypdf>=6.14.2",
+    "aiofiles>=25.1.0",
+]
