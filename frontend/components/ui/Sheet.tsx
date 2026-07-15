@@ -55,7 +55,7 @@ export const Sheet: React.FC<SheetProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end">
+        <div className={`fixed inset-0 z-50 flex ${position === "right" ? "justify-end" : "justify-start"}`}>
           {/* Backdrop overlay */}
           <motion.div
             initial={{ opacity: 0 }}

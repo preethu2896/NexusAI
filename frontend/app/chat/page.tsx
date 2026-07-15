@@ -64,6 +64,7 @@ export default function AIChat() {
 
   // Layout states for responsive panels
   const [isInspectorOpen, setIsInspectorOpen] = useState(true);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -302,147 +303,164 @@ export default function AIChat() {
     </div>
   );
 
-  return (
-    <div className="h-[calc(100vh-10rem)] -m-4 sm:-m-6 lg:-m-8 flex overflow-hidden select-none">
-      {/* Pane 1: Conversations sidebar */}
-      <div className="w-64 bg-[#0f131d] border-r border-white/5 flex flex-col h-full shrink-0 select-none">
-        {/* Actions header */}
-        <div className="p-3 border-b border-white/5 space-y-2 shrink-0">
-          <Button onClick={handleCreateNewChat} className="w-full justify-center text-xs py-1.5 bg-[#adc6ff] hover:bg-[#9cbbf5] text-[#002e6a]">
-            <Plus className="w-3.5 h-3.5 mr-1" /> New Thread
-          </Button>
-          <div className="relative flex items-center">
-            <Search className="w-3.5 h-3.5 text-on-surface-variant/30 absolute left-2.5 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search chats..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-1 pl-8 pr-2 rounded bg-surface-container border border-white/5 outline-none text-xs text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/20 transition-all font-mono"
-            />
-          </div>
-        </div>
-
-        {/* Scrollable list */}
-        <div className="flex-grow overflow-y-auto custom-scrollbar p-2 space-y-3.5">
-          {/* Pinned Chats */}
-          {pinnedConversations.length > 0 && (
-            <div className="space-y-1">
-              <span className="text-[8px] font-bold font-mono tracking-widest text-on-surface-variant/35 uppercase px-2 select-none block">
-                Pinned Chats
-              </span>
-              <div className="space-y-0.5">
-                {pinnedConversations.map((conv) => {
-                  const isActive = conv.id === activeConversationId;
-                  return (
-                    <div
-                      key={conv.id}
-                      onClick={() => selectConversation(conv.id)}
-                      className={`group p-2 rounded flex items-center justify-between cursor-pointer transition-all ${
-                        isActive
-                          ? "bg-[#1c2438] text-primary border border-primary/10"
-                          : "text-on-surface-variant/65 hover:bg-white/3 hover:text-on-surface"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 overflow-hidden mr-2">
-                        <Pin className="w-3 h-3 text-primary shrink-0 rotate-45" />
-                        <span className="text-[11px] font-semibold truncate leading-none">
-                          {conv.title || "Untitled Chat"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                        <button
-                          onClick={(e) => togglePinChat(conv.id, e)}
-                          className="text-on-surface-variant/45 hover:text-on-surface cursor-pointer"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteConversation(conv.id);
-                          }}
-                          className="text-on-surface-variant/45 hover:text-error cursor-pointer"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Recent Chats */}
-          <div className="space-y-1">
-            <span className="text-[8px] font-bold font-mono tracking-widest text-on-surface-variant/35 uppercase px-2 select-none block">
-              Recent Threads
-            </span>
-            {recentConversations.length === 0 && pinnedConversations.length === 0 ? (
-              <div className="py-6 text-center text-[10px] text-on-surface-variant/20 font-mono">
-                No threads logged
-              </div>
-            ) : (
-              <div className="space-y-0.5">
-                {recentConversations.map((conv) => {
-                  const isActive = conv.id === activeConversationId;
-                  return (
-                    <div
-                      key={conv.id}
-                      onClick={() => selectConversation(conv.id)}
-                      className={`group p-2 rounded flex items-center justify-between cursor-pointer transition-all ${
-                        isActive
-                          ? "bg-[#1c2438] text-primary border border-primary/10"
-                          : "text-on-surface-variant/65 hover:bg-white/3 hover:text-on-surface"
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 overflow-hidden mr-2">
-                        <MessageSquare className="w-3 h-3 text-on-surface-variant/35 shrink-0" />
-                        <span className="text-[11px] font-semibold truncate leading-none">
-                          {conv.title || "Untitled Chat"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
-                        <button
-                          onClick={(e) => togglePinChat(conv.id, e)}
-                          className="text-on-surface-variant/45 hover:text-on-surface cursor-pointer"
-                        >
-                          <Pin className="w-3 h-3 rotate-45" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteConversation(conv.id);
-                          }}
-                          className="text-on-surface-variant/45 hover:text-error cursor-pointer"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+  const renderSidebarContent = () => (
+    <div className="flex flex-col h-full bg-[#0f131d]">
+      {/* Actions header */}
+      <div className="p-3 border-b border-white/5 space-y-2 shrink-0">
+        <Button onClick={() => { handleCreateNewChat(); setIsHistoryOpen(false); }} className="w-full justify-center text-xs py-1.5 bg-[#adc6ff] hover:bg-[#9cbbf5] text-[#002e6a]">
+          <Plus className="w-3.5 h-3.5 mr-1" /> New Thread
+        </Button>
+        <div className="relative flex items-center">
+          <Search className="w-3.5 h-3.5 text-on-surface-variant/30 absolute left-2.5 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search chats..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full py-1 pl-8 pr-2 rounded bg-surface-container border border-white/5 outline-none text-xs text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/20 transition-all font-mono"
+          />
         </div>
       </div>
 
+      {/* Scrollable list */}
+      <div className="flex-grow overflow-y-auto custom-scrollbar p-2 space-y-3.5">
+        {/* Pinned Chats */}
+        {pinnedConversations.length > 0 && (
+          <div className="space-y-1">
+            <span className="text-[8px] font-bold font-mono tracking-widest text-on-surface-variant/35 uppercase px-2 select-none block">
+              Pinned Chats
+            </span>
+            <div className="space-y-0.5">
+              {pinnedConversations.map((conv) => {
+                const isActive = conv.id === activeConversationId;
+                return (
+                  <div
+                    key={conv.id}
+                    onClick={() => { selectConversation(conv.id); setIsHistoryOpen(false); }}
+                    className={`group p-2 rounded flex items-center justify-between cursor-pointer transition-all ${
+                      isActive
+                        ? "bg-[#1c2438] text-primary border border-primary/10"
+                        : "text-on-surface-variant/65 hover:bg-white/3 hover:text-on-surface"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 overflow-hidden mr-2">
+                      <Pin className="w-3 h-3 text-primary shrink-0 rotate-45" />
+                      <span className="text-[11px] font-semibold truncate leading-none">
+                        {conv.title || "Untitled Chat"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                      <button
+                        onClick={(e) => togglePinChat(conv.id, e)}
+                        className="text-on-surface-variant/45 hover:text-on-surface cursor-pointer"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteConversation(conv.id);
+                        }}
+                        className="text-on-surface-variant/45 hover:text-error cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Chats */}
+        <div className="space-y-1">
+          <span className="text-[8px] font-bold font-mono tracking-widest text-on-surface-variant/35 uppercase px-2 select-none block">
+            Recent Threads
+          </span>
+          {recentConversations.length === 0 && pinnedConversations.length === 0 ? (
+            <div className="py-6 text-center text-[10px] text-on-surface-variant/20 font-mono">
+              No threads logged
+            </div>
+          ) : (
+            <div className="space-y-0.5">
+              {recentConversations.map((conv) => {
+                const isActive = conv.id === activeConversationId;
+                return (
+                  <div
+                    key={conv.id}
+                    onClick={() => { selectConversation(conv.id); setIsHistoryOpen(false); }}
+                    className={`group p-2 rounded flex items-center justify-between cursor-pointer transition-all ${
+                      isActive
+                        ? "bg-[#1c2438] text-primary border border-primary/10"
+                        : "text-on-surface-variant/65 hover:bg-white/3 hover:text-on-surface"
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 overflow-hidden mr-2">
+                      <MessageSquare className="w-3 h-3 text-on-surface-variant/35 shrink-0" />
+                      <span className="text-[11px] font-semibold truncate leading-none">
+                        {conv.title || "Untitled Chat"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all shrink-0">
+                      <button
+                        onClick={(e) => togglePinChat(conv.id, e)}
+                        className="text-on-surface-variant/45 hover:text-on-surface cursor-pointer"
+                      >
+                        <Pin className="w-3 h-3 rotate-45" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteConversation(conv.id);
+                        }}
+                        className="text-on-surface-variant/45 hover:text-error cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-[calc(100vh-10rem)] -m-4 sm:-m-6 lg:-m-8 flex overflow-hidden select-none w-full relative">
+      {/* Pane 1: Conversations sidebar (Desktop only) */}
+      <div className="hidden md:flex w-64 border-r border-white/5 flex-col h-full shrink-0 select-none">
+        {renderSidebarContent()}
+      </div>
+
       {/* Pane 2: Center Chat focus frame */}
-      <div className="flex-1 flex flex-col h-full bg-[#07090e] overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-full bg-[#07090e] overflow-hidden relative min-w-0">
         {/* Header selector */}
-        <div className="h-14 border-b border-white/5 px-6 flex items-center justify-between bg-[#0f131d]/20 shrink-0 select-none">
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-bold font-mono tracking-wider text-on-surface-variant/40 uppercase">Selected Collection Source:</span>
+        <div className="h-14 border-b border-white/5 px-4 sm:px-6 flex items-center justify-between bg-[#0f131d]/20 shrink-0 select-none">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Mobile history toggle */}
+            <button
+              onClick={() => setIsHistoryOpen(true)}
+              className="p-1.5 rounded hover:bg-white/5 transition-all text-on-surface-variant/60 hover:text-on-surface cursor-pointer md:hidden focus:outline-none shrink-0"
+              title="Open Chat History"
+            >
+              <MessageSquare className="w-4 h-4" />
+            </button>
+
+            <span className="text-[10px] font-bold font-mono tracking-wider text-on-surface-variant/40 uppercase hidden sm:inline shrink-0">
+              Selected Source:
+            </span>
             {documents.length === 0 ? (
-              <span className="text-[9px] text-error font-mono font-semibold uppercase tracking-wider">No indexed collections</span>
+              <span className="text-[9px] text-error font-mono font-semibold uppercase tracking-wider truncate">No indexed collections</span>
             ) : (
-              <div className="relative">
+              <div className="relative min-w-0">
                 <select
                   value={selectedDocumentId || ""}
                   onChange={(e) => selectDocument(e.target.value)}
-                  className="bg-[#171b26] border border-white/5 text-[10px] text-on-surface font-semibold py-1 px-2 rounded outline-none cursor-pointer focus:border-primary/20"
+                  className="bg-[#171b26] border border-white/5 text-[10px] text-on-surface font-semibold py-1 px-2 rounded outline-none cursor-pointer focus:border-primary/20 max-w-[160px] sm:max-w-xs truncate"
                 >
                   {documents.map((d) => (
                     <option key={d.document_id} value={d.document_id}>
@@ -456,7 +474,7 @@ export default function AIChat() {
 
           <button
             onClick={() => setIsInspectorOpen(!isInspectorOpen)}
-            className={`p-1.5 rounded hover:bg-white/5 transition-all text-on-surface-variant/60 hover:text-on-surface cursor-pointer hidden lg:block focus:outline-none ${
+            className={`p-1.5 rounded hover:bg-white/5 transition-all text-on-surface-variant/60 hover:text-on-surface cursor-pointer hidden lg:block focus:outline-none shrink-0 ${
               isInspectorOpen ? "text-primary hover:text-primary" : ""
             }`}
             title="Toggle RAG Telemetry Inspector"
@@ -467,7 +485,7 @@ export default function AIChat() {
 
         {/* Messaging stream */}
         {!activeConversationId ? (
-          <div className="flex-grow flex flex-col items-center justify-center p-8 text-center select-none max-w-md mx-auto">
+          <div className="flex-grow flex flex-col items-center justify-center p-8 text-center select-none w-full max-w-md mx-auto">
             <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary mb-4 animate-pulse">
               <Sparkles className="w-5 h-5 text-primary" />
             </div>
@@ -482,7 +500,7 @@ export default function AIChat() {
           <>
             <div className="flex-grow overflow-y-auto custom-scrollbar p-6 space-y-6">
               {messages.length === 0 ? (
-                <div className="h-full flex flex-col justify-center items-center select-none max-w-xl mx-auto space-y-6">
+                <div className="h-full flex flex-col justify-center items-center select-none w-full max-w-xl mx-auto space-y-6">
                   <div className="text-center space-y-1">
                     <Sparkles className="w-5 h-5 text-primary mx-auto opacity-75 animate-pulse" />
                     <h4 className="text-[10px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">Suggested Prompts</h4>
@@ -614,6 +632,18 @@ export default function AIChat() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Sheet Drawer for mobile/tablet history view */}
+      <Sheet
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        position="left"
+        title="Chat history"
+      >
+        <div className="-m-6 h-full flex flex-col">
+          {renderSidebarContent()}
+        </div>
+      </Sheet>
 
       {/* Sheet Drawer for Tablet / Mobile Inspector view */}
       <Sheet
