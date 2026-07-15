@@ -23,8 +23,10 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  ChevronRight,
+  HardDrive,
+  Clock,
 } from "lucide-react";
-import { motion } from "framer-motion";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
@@ -46,14 +48,12 @@ export default function Dashboard() {
     selectConversation,
   } = useChatStore();
 
-  // Ingestion dialog state
+  // Ingestion state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docTitle, setDocTitle] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
-
-  // System stats state
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function Dashboard() {
 
   const handleStartChat = async () => {
     try {
-      const id = await createConversation(`Workspace Chat #${conversations.length + 1}`);
+      const id = await createConversation(`Session Query #${conversations.length + 1}`);
       addToast("Created a new AI chat thread", "success");
       router.push("/chat");
     } catch (e) {
@@ -108,39 +108,38 @@ export default function Dashboard() {
       setIsSyncing(false);
       fetchDocuments();
       addToast("Vector embeddings sync completed", "success");
-    }, 2000);
+    }, 1500);
   };
 
-  // Pipeline chunks visual state
+  // Pipeline chunks stats
   const totalChunks = documents.reduce((acc, doc) => acc + (doc.chunk_count || 0), 0);
   const indexedCount = documents.filter((d) => d.status === "indexed").length;
   const processingCount = documents.filter((d) => d.status === "processing").length;
   const failedCount = documents.filter((d) => d.status === "failed").length;
 
   return (
-    <div className="space-y-8 pb-12 select-none">
-      {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 pb-12 select-none">
+      {/* Header bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div>
-          <h1 className="text-display-lg-mobile md:text-headline-md lg:text-display-lg text-on-surface tracking-tight font-semibold select-none leading-none">
-            AI Operating System
-          </h1>
-          <p className="text-body-sm text-on-surface-variant/65 mt-2.5">
-            Orchestrating reference knowledge libraries, Agentic pipeline workflows, and secure inference queries.
+          <h2 className="text-headline-md font-bold tracking-tight text-on-surface">
+            Operational Control Center
+          </h2>
+          <p className="text-xs text-on-surface-variant/60 mt-1">
+            Real-time pipeline monitoring, ingestion orchestrations, and LLM telemetry.
           </p>
         </div>
 
-        {/* Live system state */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-default bg-surface-container border border-white/5 text-[10px] font-bold font-mono tracking-wider text-green-400 uppercase">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#0f2e1a] border border-green-500/20 text-[9px] font-bold font-mono tracking-wider text-green-400 uppercase select-none">
             <span className="w-1.5 h-1.5 rounded-full bg-green-400 block shrink-0 animate-pulse" />
-            Operational
+            Active
           </div>
           <Button
             variant="ghost"
             onClick={handleForceSync}
             disabled={isSyncing}
-            className="text-xs"
+            className="text-xs border border-white/5 bg-white/3 hover:bg-white/5"
           >
             {isSyncing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
@@ -152,356 +151,272 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Grid: Health & Summary Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Workspace Health */}
-        <Card variant="surface" className="p-6 relative overflow-hidden group">
-          <div className="flex items-center justify-between text-on-surface-variant/40 mb-3">
-            <span className="text-[10px] font-bold font-mono tracking-widest uppercase">
-              System Health
-            </span>
-            <ShieldCheck className="w-4 h-4 text-green-400" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-on-surface">
-              99.98%
-            </span>
-            <span className="text-[9px] text-green-400 font-mono font-bold">
-              Optimal
-            </span>
-          </div>
-          <p className="text-[10px] text-on-surface-variant/40 mt-2">
-            Inference latencies average 142ms.
-          </p>
-        </Card>
-
-        {/* Active Collections */}
-        <Card variant="surface" className="p-6 relative overflow-hidden group">
-          <div className="flex items-center justify-between text-on-surface-variant/40 mb-3">
-            <span className="text-[10px] font-bold font-mono tracking-widest uppercase">
-              Knowledge Summary
-            </span>
-            <Layers className="w-4 h-4 text-primary" />
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight text-on-surface">
-              {documents.length} Docs
-            </span>
-            <span className="text-[10px] text-on-surface-variant/40 font-mono">
-              {totalChunks} Chunks
-            </span>
-          </div>
-          <p className="text-[10px] text-on-surface-variant/40 mt-2">
-            ChromaDB embeddings database indexed.
-          </p>
-        </Card>
-
-        {/* Retrieval Status */}
-        <Card variant="surface" className="p-6 relative overflow-hidden group">
-          <div className="flex items-center justify-between text-on-surface-variant/40 mb-3">
-            <span className="text-[10px] font-bold font-mono tracking-widest uppercase">
-              Retrieval Accuracy
-            </span>
-            <Brain className="w-4 h-4 text-[#d0bcff]" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-on-surface">
-              98.4%
-            </span>
-            <span className="text-[9px] text-[#d0bcff] font-mono font-semibold">
-              Cosine Sim
-            </span>
-          </div>
-          <p className="text-[10px] text-on-surface-variant/40 mt-2">
-            Average query distance delta 0.89.
-          </p>
-        </Card>
-
-        {/* Token Usage */}
-        <Card variant="surface" className="p-6 relative overflow-hidden group">
-          <div className="flex items-center justify-between text-on-surface-variant/40 mb-3">
-            <span className="text-[10px] font-bold font-mono tracking-widest uppercase">
-              Current Model
-            </span>
-            <Cpu className="w-4 h-4 text-yellow-400" />
-          </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold tracking-tight text-on-surface">
-              GPT-4o
-            </span>
-            <span className="text-[9px] text-on-surface-variant/40 font-mono">
-              LLM Provider
-            </span>
-          </div>
-          <p className="text-[10px] text-on-surface-variant/40 mt-2">
-            Active connections to OpenAI secure API.
-          </p>
-        </Card>
-      </div>
-
-      {/* Grid: Quick Actions Command bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <button
-          onClick={() => setIsUploadOpen(true)}
-          className="flex items-center gap-3 p-4 bg-surface-container border border-white/5 hover:border-primary/20 hover:bg-white/3 rounded-default transition-all duration-150 cursor-pointer text-left focus:outline-none group"
-        >
-          <div className="w-8 h-8 rounded bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-on-primary transition-colors">
-            <Upload className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-xs font-bold text-on-surface block">
-              Upload Document
-            </span>
-            <span className="text-[9px] text-on-surface-variant/40 block mt-0.5">
-              Ingest new reference PDF
-            </span>
-          </div>
-        </button>
-
-        <button
-          onClick={handleStartChat}
-          className="flex items-center gap-3 p-4 bg-surface-container border border-white/5 hover:border-[#d0bcff]/20 hover:bg-white/3 rounded-default transition-all duration-150 cursor-pointer text-left focus:outline-none group"
-        >
-          <div className="w-8 h-8 rounded bg-[#d0bcff]/10 border border-[#d0bcff]/20 text-[#d0bcff] flex items-center justify-center shrink-0 group-hover:bg-[#d0bcff] group-hover:text-on-secondary transition-colors">
-            <Plus className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-xs font-bold text-on-surface block">
-              Start Chat
-            </span>
-            <span className="text-[9px] text-on-surface-variant/40 block mt-0.5">
-              Launch a new chat session
-            </span>
-          </div>
-        </button>
-
-        <button
-          onClick={() => router.push("/knowledge")}
-          className="flex items-center gap-3 p-4 bg-surface-container border border-white/5 hover:border-cyan-400/20 hover:bg-white/3 rounded-default transition-all duration-150 cursor-pointer text-left focus:outline-none group"
-        >
-          <div className="w-8 h-8 rounded bg-cyan-400/10 border border-cyan-400/20 text-cyan-400 flex items-center justify-center shrink-0 group-hover:bg-cyan-400 group-hover:text-black transition-colors">
-            <Layers className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-xs font-bold text-on-surface block">
-              Create Collection
-            </span>
-            <span className="text-[9px] text-on-surface-variant/40 block mt-0.5">
-              Group reference indexes
-            </span>
-          </div>
-        </button>
-
-        <button
-          onClick={() => router.push("/analytics")}
-          className="flex items-center gap-3 p-4 bg-surface-container border border-white/5 hover:border-yellow-400/20 hover:bg-white/3 rounded-default transition-all duration-150 cursor-pointer text-left focus:outline-none group"
-        >
-          <div className="w-8 h-8 rounded bg-yellow-400/10 border border-yellow-400/20 text-yellow-400 flex items-center justify-center shrink-0 group-hover:bg-yellow-400 group-hover:text-black transition-colors">
-            <BarChart3 className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="text-xs font-bold text-on-surface block">
-              View Analytics
-            </span>
-            <span className="text-[9px] text-on-surface-variant/40 block mt-0.5">
-              Check model token latencies
-            </span>
-          </div>
-        </button>
-      </div>
-
-      {/* Grid: Pipeline Status & Activity Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* Pipeline Status */}
-        <Card variant="surface" className="p-6 lg:col-span-1">
-          <div className="flex items-center gap-2 mb-6">
-            <Activity className="w-4 h-4 text-primary" />
-            <h3 className="text-label-caps text-on-surface tracking-wider">
-              Pipeline Status
-            </h3>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1.5 font-bold font-mono text-on-surface-variant/50">
-                <span>Indexed (Success)</span>
-                <span className="text-on-surface">{indexedCount} / {documents.length}</span>
+      {/* Main command center grid layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+        {/* Left & Middle Column panel */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* KPI metrics nodes */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Card variant="surface" className="p-4 border border-white/5">
+              <span className="text-[9px] font-bold font-mono tracking-widest uppercase text-on-surface-variant/40 block mb-1">
+                System Health
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-lg font-bold text-on-surface">99.98%</span>
+                <span className="text-[8px] text-green-400 font-mono font-bold">Uptime</span>
               </div>
-              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="bg-green-400 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${documents.length ? (indexedCount / documents.length) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
+            </Card>
 
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1.5 font-bold font-mono text-on-surface-variant/50">
-                <span>Processing</span>
-                <span className="text-on-surface">{processingCount}</span>
+            <Card variant="surface" className="p-4 border border-white/5">
+              <span className="text-[9px] font-bold font-mono tracking-widest uppercase text-on-surface-variant/40 block mb-1">
+                Document Index
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-lg font-bold text-on-surface">{documents.length} Files</span>
+                <span className="text-[8px] text-primary font-mono font-bold">{totalChunks} Chunks</span>
               </div>
-              <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
-                <div
-                  className="bg-primary h-full rounded-full transition-all duration-500"
-                  style={{ width: `${documents.length ? (processingCount / documents.length) * 100 : 0}%` }}
-                />
-              </div>
-            </div>
+            </Card>
 
-            <div className="pt-4 border-t border-white/5 grid grid-cols-3 gap-4 text-center">
-              <div>
-                <span className="text-xs font-bold text-on-surface block">{indexedCount}</span>
-                <span className="text-[9px] text-on-surface-variant/40 uppercase font-bold mt-1">Indexed</span>
+            <Card variant="surface" className="p-4 border border-white/5">
+              <span className="text-[9px] font-bold font-mono tracking-widest uppercase text-on-surface-variant/40 block mb-1">
+                Retrieval Sim
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-lg font-bold text-on-surface">98.4%</span>
+                <span className="text-[8px] text-[#d0bcff] font-mono font-bold">Cosine</span>
               </div>
-              <div>
-                <span className="text-xs font-bold text-on-surface block">{processingCount}</span>
-                <span className="text-[9px] text-on-surface-variant/40 uppercase font-bold mt-1">Pending</span>
+            </Card>
+
+            <Card variant="surface" className="p-4 border border-white/5">
+              <span className="text-[9px] font-bold font-mono tracking-widest uppercase text-on-surface-variant/40 block mb-1">
+                LLM Inference
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-lg font-bold text-on-surface">GPT-4o</span>
+                <span className="text-[8px] text-yellow-500 font-mono font-bold">Active</span>
               </div>
-              <div>
-                <span className="text-xs font-bold text-on-surface block">{failedCount}</span>
-                <span className="text-[9px] text-on-surface-variant/40 uppercase font-bold mt-1">Failed</span>
-              </div>
-            </div>
+            </Card>
           </div>
-        </Card>
 
-        {/* Activity Timeline */}
-        <Card variant="surface" className="p-6 lg:col-span-2">
-          <h3 className="text-label-caps text-on-surface tracking-wider mb-6">
-            Ingestion & Inferences Timeline
-          </h3>
-
-          <div className="space-y-4 relative before:absolute before:top-2 before:bottom-2 before:left-[11px] before:w-0.5 before:bg-white/5">
-            <div className="flex gap-4 relative">
-              <div className="w-6 h-6 rounded-full bg-green-500/10 border border-green-500/30 flex items-center justify-center shrink-0 z-10">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start gap-2">
-                  <span className="text-xs font-semibold text-on-surface block">
-                    Document parser synchronization complete
-                  </span>
-                  <span className="text-[10px] font-mono text-on-surface-variant/45">Just now</span>
-                </div>
-                <p className="text-[10px] text-on-surface-variant/65 mt-1 leading-normal">
-                  ChromaDB vector embedding clusters successfully synchronized with OpenAI index structures.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 relative">
-              <div className="w-6 h-6 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0 z-10">
-                <Upload className="w-3.5 h-3.5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start gap-2">
-                  <span className="text-xs font-semibold text-on-surface block">
-                    Source text ingestion triggered
-                  </span>
-                  <span className="text-[10px] font-mono text-on-surface-variant/45">12m ago</span>
-                </div>
-                <p className="text-[10px] text-on-surface-variant/65 mt-1 leading-normal">
-                  User uploaded standard document files containing reference APIs.
-                </p>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Grid: Recent Conversations & Recent Documents */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Recent Conversations */}
-        <Card variant="surface" className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-label-caps text-on-surface tracking-wider">
-              Recent Conversations
-            </h3>
+          {/* Quick Operations Actions bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 select-none">
             <button
-              onClick={() => router.push("/chat")}
-              className="text-xs text-primary hover:text-[#9cbbf5] transition-colors flex items-center gap-1 font-semibold"
+              onClick={() => setIsUploadOpen(true)}
+              className="flex items-center justify-between p-3 bg-surface-container border border-white/5 hover:border-primary/20 rounded-default text-left transition-all cursor-pointer focus:outline-none group"
             >
-              View Chat Feed <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {conversations.length === 0 ? (
-              <div className="py-8 text-center text-xs text-on-surface-variant/30 font-mono">
-                No active conversations found.
+              <div className="min-w-0">
+                <span className="text-[11px] font-bold text-on-surface block truncate">Upload PDF</span>
+                <span className="text-[9px] text-on-surface-variant/40 block truncate mt-0.5">Ingest new knowledge</span>
               </div>
-            ) : (
-              conversations.slice(0, 3).map((conv) => (
-                <div
-                  key={conv.id}
-                  onClick={async () => {
-                    await selectConversation(conv.id);
-                    router.push("/chat");
-                  }}
-                  className="p-3.5 rounded-default border border-white/5 hover:border-primary/20 bg-surface-container-low/40 hover:bg-white/3 transition-all duration-150 cursor-pointer flex items-center justify-between gap-4 group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <MessageSquare className="w-4 h-4 text-on-surface-variant/30 group-hover:text-primary shrink-0" />
-                    <span className="text-xs font-semibold text-on-surface group-hover:text-primary transition-colors truncate">
-                      {conv.title || "Untitled Chat"}
-                    </span>
-                  </div>
-                  <span className="text-[9px] font-mono text-on-surface-variant/40 shrink-0">
-                    {new Date(conv.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
+              <Upload className="w-4 h-4 text-on-surface-variant/30 group-hover:text-primary shrink-0 ml-1.5" />
+            </button>
 
-        {/* Recent Documents */}
-        <Card variant="surface" className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-label-caps text-on-surface tracking-wider">
-              Recent Documents
-            </h3>
+            <button
+              onClick={handleStartChat}
+              className="flex items-center justify-between p-3 bg-surface-container border border-white/5 hover:border-[#d0bcff]/20 rounded-default text-left transition-all cursor-pointer focus:outline-none group"
+            >
+              <div className="min-w-0">
+                <span className="text-[11px] font-bold text-on-surface block truncate">Query RAG</span>
+                <span className="text-[9px] text-on-surface-variant/40 block truncate mt-0.5">Launch new chat</span>
+              </div>
+              <Plus className="w-4 h-4 text-on-surface-variant/30 group-hover:text-[#d0bcff] shrink-0 ml-1.5" />
+            </button>
+
             <button
               onClick={() => router.push("/knowledge")}
-              className="text-xs text-primary hover:text-[#9cbbf5] transition-colors flex items-center gap-1 font-semibold"
+              className="flex items-center justify-between p-3 bg-surface-container border border-white/5 hover:border-cyan-400/20 rounded-default text-left transition-all cursor-pointer focus:outline-none group"
             >
-              Browse Library <ArrowRight className="w-3.5 h-3.5" />
+              <div className="min-w-0">
+                <span className="text-[11px] font-bold text-on-surface block truncate">Browse Files</span>
+                <span className="text-[9px] text-on-surface-variant/40 block truncate mt-0.5">Manage collections</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-on-surface-variant/30 group-hover:text-cyan-400 shrink-0 ml-1.5" />
+            </button>
+
+            <button
+              onClick={() => router.push("/analytics")}
+              className="flex items-center justify-between p-3 bg-surface-container border border-white/5 hover:border-yellow-400/20 rounded-default text-left transition-all cursor-pointer focus:outline-none group"
+            >
+              <div className="min-w-0">
+                <span className="text-[11px] font-bold text-on-surface block truncate">Observability</span>
+                <span className="text-[9px] text-on-surface-variant/40 block truncate mt-0.5">Check token telemetry</span>
+              </div>
+              <BarChart3 className="w-4 h-4 text-on-surface-variant/30 group-hover:text-yellow-400 shrink-0 ml-1.5" />
             </button>
           </div>
 
-          <div className="space-y-3">
-            {documents.length === 0 ? (
-              <div className="py-8 text-center text-xs text-on-surface-variant/30 font-mono">
-                No indexed files found.
-              </div>
-            ) : (
-              documents.slice(0, 3).map((doc) => (
-                <div
-                  key={doc.document_id}
-                  className="p-3.5 rounded-default border border-white/5 bg-surface-container-low/40 flex items-center justify-between gap-4"
+          {/* Tables: Recent Documents & Conversations */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Recent Documents Table */}
+            <Card variant="surface" className="p-4 border border-white/5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/45 uppercase">
+                  Recent Document Ingestions
+                </span>
+                <button
+                  onClick={() => router.push("/knowledge")}
+                  className="text-[10px] text-primary hover:underline font-semibold"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-4 h-4 text-on-surface-variant/30 shrink-0" />
-                    <div className="min-w-0">
-                      <span className="text-xs font-semibold text-on-surface block truncate">
-                        {doc.title}
-                      </span>
-                      <span className="text-[9px] text-on-surface-variant/45 font-mono block mt-0.5">
-                        {doc.chunk_count} Chunks • {doc.status}
+                  View library
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {documents.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-on-surface-variant/30 font-mono">
+                    No active documents.
+                  </div>
+                ) : (
+                  documents.slice(0, 3).map((doc) => (
+                    <div
+                      key={doc.document_id}
+                      className="p-2.5 rounded bg-surface-container-low/50 border border-white/3 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-semibold text-on-surface block truncate">
+                          {doc.title}
+                        </span>
+                        <span className="text-[9px] text-on-surface-variant/40 font-mono block mt-0.5">
+                          {doc.chunk_count} chunks • {(doc.file_size_bytes ? (doc.file_size_bytes / 1024).toFixed(1) : 0)} KB
+                        </span>
+                      </div>
+                      <Badge variant={doc.status === "indexed" ? "success" : "secondary"}>
+                        {doc.status}
+                      </Badge>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+
+            {/* Recent Conversations Table */}
+            <Card variant="surface" className="p-4 border border-white/5">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/45 uppercase">
+                  Recent Chat Inferences
+                </span>
+                <button
+                  onClick={() => router.push("/chat")}
+                  className="text-[10px] text-primary hover:underline font-semibold"
+                >
+                  View console
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {conversations.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-on-surface-variant/30 font-mono">
+                    No active threads.
+                  </div>
+                ) : (
+                  conversations.slice(0, 3).map((conv) => (
+                    <div
+                      key={conv.id}
+                      onClick={async () => {
+                        await selectConversation(conv.id);
+                        router.push("/chat");
+                      }}
+                      className="p-2.5 rounded bg-surface-container-low/50 border border-white/3 hover:border-primary/20 transition-all cursor-pointer flex items-center justify-between gap-3 text-xs group"
+                    >
+                      <div className="min-w-0 flex items-center gap-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-on-surface-variant/30 group-hover:text-primary shrink-0" />
+                        <span className="font-semibold text-on-surface block truncate group-hover:text-primary transition-colors">
+                          {conv.title || "Untitled Chat"}
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-mono text-on-surface-variant/30 shrink-0">
+                        {new Date(conv.created_at).toLocaleDateString()}
                       </span>
                     </div>
-                  </div>
-                  <Badge variant={doc.status === "indexed" ? "success" : "secondary"}>
-                    {doc.status}
-                  </Badge>
-                </div>
-              ))
-            )}
+                  ))
+                )}
+              </div>
+            </Card>
           </div>
-        </Card>
+        </div>
+
+        {/* Right side operational log panel */}
+        <div className="space-y-6">
+          {/* Pipeline queues */}
+          <Card variant="surface" className="p-4 border border-white/5">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="w-4 h-4 text-primary" />
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/45 uppercase">
+                Pipeline Index status
+              </span>
+            </div>
+
+            <div className="space-y-3.5">
+              <div>
+                <div className="flex justify-between text-[10px] font-mono text-on-surface-variant/50 mb-1">
+                  <span>Indexed Files</span>
+                  <span className="text-on-surface">{indexedCount} / {documents.length}</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-green-400 h-full rounded-full transition-all duration-300"
+                    style={{ width: `${documents.length ? (indexedCount / documents.length) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] font-mono text-on-surface-variant/50 mb-1">
+                  <span>In Progress</span>
+                  <span className="text-on-surface">{processingCount}</span>
+                </div>
+                <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div
+                    className="bg-primary h-full rounded-full transition-all duration-300"
+                    style={{ width: `${documents.length ? (processingCount / documents.length) * 100 : 0}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/5 grid grid-cols-3 gap-2 text-center font-mono text-[9px] text-on-surface-variant/40">
+                <div>
+                  <strong className="text-on-surface block text-xs">{indexedCount}</strong> indexed
+                </div>
+                <div>
+                  <strong className="text-on-surface block text-xs">{processingCount}</strong> pending
+                </div>
+                <div>
+                  <strong className="text-on-surface block text-xs">{failedCount}</strong> failed
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Operational logs console */}
+          <Card variant="surface" className="p-4 border border-white/5">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="w-4 h-4 text-[#d0bcff]" />
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/45 uppercase">
+                Operational Event Log
+              </span>
+            </div>
+
+            <div className="space-y-3 font-mono text-[9px] leading-relaxed relative before:absolute before:top-2 before:bottom-2 before:left-[5px] before:w-px before:bg-white/5 pl-4">
+              <div className="relative">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 block absolute -left-[14.5px] top-1" />
+                <span className="text-on-surface-variant/30 block mb-0.5">[14:10:04]</span>
+                <span className="text-on-surface-variant/75">
+                  ChromaDB vector embedding sync complete. Cosine accuracy index threshold: 0.89.
+                </span>
+              </div>
+              <div className="relative">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary block absolute -left-[14.5px] top-1" />
+                <span className="text-on-surface-variant/30 block mb-0.5">[14:02:12]</span>
+                <span className="text-on-surface-variant/75">
+                  Ingestion process triggered for standard reference document PDF upload.
+                </span>
+              </div>
+            </div>
+          </Card>
+        </div>
       </div>
 
-      {/* Upload document Modal dialog */}
+      {/* Ingest PDF Modal */}
       <Dialog
         isOpen={isUploadOpen}
         onClose={() => {

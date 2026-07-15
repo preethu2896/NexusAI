@@ -27,6 +27,9 @@ import {
   Cpu,
   RefreshCw,
   Award,
+  ShieldCheck,
+  Database,
+  BarChart3,
 } from "lucide-react";
 import { Card } from "../../components/ui/Card";
 import { Tabs } from "../../components/ui/Tabs";
@@ -38,7 +41,7 @@ export default function Analytics() {
   const { addToast } = useToastStore();
   const [timeframe, setTimeframe] = useState("30d");
 
-  // Latency & Token Usage Composed Data
+  // Telemetry mock data
   const latencyData = [
     { name: "01:00", latency: 110, tokens: 400 },
     { name: "02:00", latency: 142, tokens: 620 },
@@ -49,7 +52,6 @@ export default function Analytics() {
     { name: "07:00", latency: 142, tokens: 750 },
   ];
 
-  // Embedding Growth Area Data
   const embeddingData = [
     { name: "Jan", vectors: 1.2 },
     { name: "Feb", vectors: 1.8 },
@@ -59,22 +61,19 @@ export default function Analytics() {
     { name: "Jun", vectors: 4.8 },
   ];
 
-  // Similarity Distribution Bar Data
   const similarityData = [
     { range: "0.0-0.2", count: 12 },
     { range: "0.2-0.4", count: 48 },
     { range: "0.4-0.6", count: 142 },
     { range: "0.6-0.8", count: 854 },
-    { range: "0.8-1.0", count: 2410 }, // highlighted
+    { range: "0.8-1.0", count: 2410 },
   ];
 
-  // Cache Hit Ratio Pie Data
   const cacheData = [
     { name: "Cache Hits", value: 65, fill: "var(--color-primary)" },
     { name: "Vector Search Misses", value: 35, fill: "rgba(255,255,255,0.08)" },
   ];
 
-  // Model usage chart data
   const modelUsageData = [
     { name: "GPT-4o", queries: 12480, fill: "var(--color-primary)" },
     { name: "GPT-4o-mini", queries: 8240, fill: "var(--color-secondary)" },
@@ -88,13 +87,13 @@ export default function Analytics() {
   return (
     <div className="space-y-8 pb-12 select-none">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div>
           <h2 className="text-headline-md font-bold tracking-tight text-on-surface">
             AI Operations Telemetry
           </h2>
-          <p className="text-xs text-on-surface-variant/60 mt-1.5 leading-none">
-            Monitor pipeline retrieval speeds, similarity distances, cache hit efficiency, and model token costs.
+          <p className="text-xs text-on-surface-variant/60 mt-1">
+            End-to-end pipeline observability: latency rates, vector storage growth, and factual grounding checks.
           </p>
         </div>
 
@@ -111,186 +110,41 @@ export default function Analytics() {
               addToast(`Timeframe changed to ${id}`, "info");
             }}
           />
-          <Button variant="ghost" onClick={handleRefreshAnalytics}>
+          <Button variant="ghost" onClick={handleRefreshAnalytics} className="border border-white/5 bg-white/3 hover:bg-white/5">
             <RefreshCw className="w-3.5 h-3.5" />
           </Button>
         </div>
       </div>
 
-      {/* Primary Analytics grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Chart 1: Retrieval Latency vs Token Usage */}
-        <Card variant="surface" className="p-6">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h3 className="text-body-sm font-bold text-on-surface">
-                Latency vs Token Ingestion
-              </h3>
-              <p className="text-[10px] text-on-surface-variant/50 mt-1">
-                Real-time query speed (ms) mapped against prompt tokens.
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold font-mono">
-              <Clock className="w-4 h-4 text-green-400" />
-              <span>Avg: 142ms</span>
-            </div>
-          </div>
-
-          <div className="h-64 sm:h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={latencyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
-                <YAxis yAxisId="left" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
-                <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-surface-container)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "var(--radius-default)",
-                    color: "var(--color-on-surface)",
-                  }}
-                />
-                <Bar yAxisId="right" dataKey="tokens" fill="rgba(255,255,255,0.08)" radius={[3, 3, 0, 0]} />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="latency"
-                  stroke="var(--color-primary)"
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: "var(--color-primary)" }}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-center gap-6 mt-4 text-[10px] font-bold font-mono uppercase tracking-wider text-on-surface-variant/50">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-0.5 bg-primary block" />
-              <span>Latency (ms)</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 bg-white/10 rounded-sm block" />
-              <span>Tokens Used</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* Chart 2: Embedding growth */}
-        <Card variant="surface" className="p-6">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h3 className="text-body-sm font-bold text-on-surface">
-                Vector Embedding growth
-              </h3>
-              <p className="text-[10px] text-on-surface-variant/50 mt-1">
-                Cumulative vector node count indexed in ChromaDB (Millions).
-              </p>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-primary font-bold font-mono">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              <span>+240k this month</span>
-            </div>
-          </div>
-
-          <div className="h-64 sm:h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={embeddingData}>
-                <defs>
-                  <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-surface-container)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "var(--radius-default)",
-                    color: "var(--color-on-surface)",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="vectors"
-                  stroke="var(--color-primary)"
-                  fillOpacity={1}
-                  fill="url(#growthGradient)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        {/* Chart 3: Similarity score distribution */}
-        <Card variant="surface" className="p-6">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h3 className="text-body-sm font-bold text-on-surface">
-                Cosine Similarity Score Distribution
-              </h3>
-              <p className="text-[10px] text-on-surface-variant/50 mt-1">
-                Volume of query retrieval chunks grouped by accuracy similarity scores.
-              </p>
-            </div>
-            <Badge variant="success">98.4% Optimal</Badge>
-          </div>
-
-          <div className="h-64 sm:h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={similarityData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
-                <XAxis dataKey="range" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-surface-container)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    borderRadius: "var(--radius-default)",
-                    color: "var(--color-on-surface)",
-                  }}
-                />
-                <Bar dataKey="count" fill="rgba(255,255,255,0.08)" radius={[3, 3, 0, 0]}>
-                  {similarityData.map((entry, index) => {
-                    const isActive = index === 4; // Highlight highest accuracy
-                    return (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={isActive ? "var(--color-primary)" : "rgba(255,255,255,0.08)"}
-                      />
-                    );
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        {/* Chart 4: Model Usage & Cache Hit Ratio */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
+      {/* SECTION 1: System Health & Cache Observability */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Activity className="w-4 h-4 text-green-400" />
+          <h3 className="text-xs font-bold font-mono tracking-widest text-[#adc6ff] uppercase">
+            I. System Uptime & Caching
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Cache Hit Ratio Donut */}
-          <Card variant="surface" className="p-6 flex flex-col justify-between">
+          <Card variant="surface" className="p-4 border border-white/5 flex flex-col justify-between h-[210px] lg:col-span-1">
             <div>
-              <h3 className="text-body-sm font-bold text-on-surface">
-                Cache Hit Ratio
-              </h3>
-              <p className="text-[10px] text-on-surface-variant/50 mt-1">
-                Vector retrieval database caching efficiency.
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 block">
+                Cache hit ratio
+              </span>
+              <p className="text-[10px] text-on-surface-variant/50 mt-1 leading-normal">
+                Percentage of vector search queries resolved in cache to save model ingestion costs.
               </p>
             </div>
 
-            <div className="h-32 w-full relative flex items-center justify-center my-3">
+            <div className="h-24 w-full relative flex items-center justify-center my-1.5">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={cacheData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={36}
-                    outerRadius={48}
+                    innerRadius={28}
+                    outerRadius={38}
                     paddingAngle={3}
                     dataKey="value"
                   >
@@ -301,34 +155,176 @@ export default function Analytics() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
-                <span className="text-xl font-bold text-on-surface">65%</span>
-                <span className="text-[8px] text-primary font-bold font-mono tracking-wider">Hit Ratio</span>
+                <span className="text-lg font-bold text-on-surface">65%</span>
+                <span className="text-[7px] text-primary font-bold font-mono uppercase tracking-wider">Hit Ratio</span>
               </div>
             </div>
 
-            <div className="text-[9px] font-mono text-on-surface-variant/40 flex justify-between pt-2 border-t border-white/5">
+            <div className="text-[9px] font-mono text-on-surface-variant/40 flex justify-between pt-1 border-t border-white/5">
               <span>Hits: <strong>65%</strong></span>
               <span>Misses: <strong>35%</strong></span>
             </div>
           </Card>
 
-          {/* Model Usage chart */}
-          <Card variant="surface" className="p-6 flex flex-col justify-between">
+          {/* Database Health log telemetry */}
+          <Card variant="surface" className="p-4 border border-white/5 flex flex-col justify-between h-[210px] lg:col-span-2">
             <div>
-              <h3 className="text-body-sm font-bold text-on-surface">
-                Model Inference Usage
-              </h3>
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 block">
+                Active Connections Telemetry
+              </span>
+              <p className="text-[10px] text-on-surface-variant/50 mt-1">
+                Relational and Vector database servers active logs.
+              </p>
+            </div>
+
+            <div className="space-y-2.5 font-mono text-[9px] text-on-surface-variant/65">
+              <div className="flex items-center justify-between border-b border-white/3 pb-1.5">
+                <span className="flex items-center gap-1">
+                  <Database className="w-3 h-3 text-primary" /> ChromaDB Endpoint
+                </span>
+                <span className="text-green-400 font-bold">http://localhost:8000 (HEALTHY)</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-white/3 pb-1.5">
+                <span className="flex items-center gap-1">
+                  <Cpu className="w-3 h-3 text-secondary" /> PostgreSQL Engine
+                </span>
+                <span className="text-green-400 font-bold">Uptime 100% (ONLINE)</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1">
+                  <Zap className="w-3 h-3 text-yellow-500" /> OpenAI Inference API
+                </span>
+                <span className="text-green-400 font-bold">Uptime 99.98% (STABLE)</span>
+              </div>
+            </div>
+
+            <span className="text-[8px] font-mono text-on-surface-variant/30 text-right">
+              Logs checked 14s ago.
+            </span>
+          </Card>
+        </div>
+      </div>
+
+      {/* SECTION 2: Retrieval Performance */}
+      <div className="space-y-3 pt-4 border-t border-white/5">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-primary" />
+          <h3 className="text-xs font-bold font-mono tracking-widest text-[#adc6ff] uppercase">
+            II. Retrieval Accuracy & Latency
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Latency vs Tokens composed */}
+          <Card variant="surface" className="p-4 border border-white/5">
+            <div>
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 block">
+                Response Latency (ms) vs Tokens
+              </span>
+              <p className="text-[10px] text-on-surface-variant/50 mt-1 leading-normal mb-4">
+                Compares vector-fetch speeds mapped against ingested tokens volume.
+              </p>
+            </div>
+
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={latencyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                  <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={8} tickLine={false} />
+                  <YAxis yAxisId="left" stroke="rgba(255,255,255,0.3)" fontSize={8} tickLine={false} />
+                  <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.3)" fontSize={8} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--color-surface-container)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "var(--radius-default)",
+                      color: "var(--color-on-surface)",
+                      fontSize: 10,
+                    }}
+                  />
+                  <Bar yAxisId="right" dataKey="tokens" fill="rgba(255,255,255,0.08)" radius={[2, 2, 0, 0]} />
+                  <Line
+                    yAxisId="left"
+                    type="monotone"
+                    dataKey="latency"
+                    stroke="var(--color-primary)"
+                    strokeWidth={1.5}
+                    dot={{ r: 2, fill: "var(--color-primary)" }}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          {/* Cosine similarity score bar */}
+          <Card variant="surface" className="p-4 border border-white/5">
+            <div>
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 block">
+                Cosine Similarity Distribution
+              </span>
+              <p className="text-[10px] text-on-surface-variant/50 mt-1 leading-normal mb-4">
+                Total chunks retrieved grouped by accuracy metrics score thresholds.
+              </p>
+            </div>
+
+            <div className="h-56 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={similarityData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                  <XAxis dataKey="range" stroke="rgba(255,255,255,0.3)" fontSize={8} tickLine={false} />
+                  <YAxis stroke="rgba(255,255,255,0.3)" fontSize={8} tickLine={false} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--color-surface-container)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "var(--radius-default)",
+                      color: "var(--color-on-surface)",
+                      fontSize: 10,
+                    }}
+                  />
+                  <Bar dataKey="count" fill="rgba(255,255,255,0.08)" radius={[2, 2, 0, 0]}>
+                    {similarityData.map((entry, index) => {
+                      const isActive = index === 4;
+                      return (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={isActive ? "var(--color-primary)" : "rgba(255,255,255,0.08)"}
+                        />
+                      );
+                    })}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      {/* SECTION 3: LLM Consumption & Hallucination Guardrails */}
+      <div className="space-y-3 pt-4 border-t border-white/5">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-[#d0bcff]" />
+          <h3 className="text-xs font-bold font-mono tracking-widest text-[#adc6ff] uppercase">
+            III. LLM Consumption & Factual Grounding
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Model distribution */}
+          <Card variant="surface" className="p-4 border border-white/5 flex flex-col justify-between h-[210px] lg:col-span-1">
+            <div>
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 block">
+                Model Query Volume
+              </span>
               <p className="text-[10px] text-on-surface-variant/50 mt-1">
                 Volume of query inferences processed per model.
               </p>
             </div>
 
-            <div className="h-32 w-full my-3">
+            <div className="h-24 w-full my-1.5">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={modelUsageData} layout="vertical">
                   <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.3)" fontSize={8} width={50} tickLine={false} />
-                  <Bar dataKey="queries" radius={[0, 3, 3, 0]}>
+                  <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.3)" fontSize={7} width={45} tickLine={false} />
+                  <Bar dataKey="queries" radius={[0, 2, 2, 0]}>
                     {modelUsageData.map((entry, idx) => (
                       <Cell key={`cell-${idx}`} fill={entry.fill} />
                     ))}
@@ -337,12 +333,94 @@ export default function Analytics() {
               </ResponsiveContainer>
             </div>
 
-            <div className="text-[9px] font-mono text-on-surface-variant/40 flex justify-between pt-2 border-t border-white/5">
-              <span>Total: <strong>23.5k Inferences</strong></span>
+            <div className="text-[9px] font-mono text-on-surface-variant/40 flex justify-between pt-1 border-t border-white/5">
+              <span>Total Queries: <strong>23.5k Inferences</strong></span>
             </div>
           </Card>
+
+          {/* Hallucination guardrail stats */}
+          <Card variant="surface" className="p-4 border border-white/5 flex flex-col justify-between h-[210px] lg:col-span-2">
+            <div>
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 block">
+                Hallucination Detection & Citation Audits
+              </span>
+              <p className="text-[10px] text-on-surface-variant/50 mt-1 leading-normal">
+                Verifies if generated LLM responses match retrieved reference source documents.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 my-2 text-center select-none">
+              <div className="bg-[#0f2e1a] border border-green-500/20 p-3 rounded">
+                <span className="text-[18px] font-bold text-green-400 block leading-none">99.4%</span>
+                <span className="text-[8px] font-mono text-green-400 font-bold uppercase tracking-wider block mt-1">Factual Grounding</span>
+              </div>
+              <div className="bg-primary/10 border border-primary/20 p-3 rounded">
+                <span className="text-[18px] font-bold text-primary block leading-none">100%</span>
+                <span className="text-[8px] font-mono text-primary font-bold uppercase tracking-wider block mt-1">Citations Verified</span>
+              </div>
+            </div>
+
+            <p className="text-[9px] font-mono text-on-surface-variant/40 leading-normal">
+              Reflexive check model monitors all prompts inputs against indexed database ranges.
+            </p>
+          </Card>
         </div>
+      </div>
+
+      {/* SECTION 4: Vector Storage & Ingestion Scaling */}
+      <div className="space-y-3 pt-4 border-t border-white/5">
+        <div className="flex items-center gap-2">
+          <Database className="w-4 h-4 text-primary" />
+          <h3 className="text-xs font-bold font-mono tracking-widest text-[#adc6ff] uppercase">
+            IV. Embedding Storage & Growth
+          </h3>
+        </div>
+        <Card variant="surface" className="p-4 border border-white/5">
+          <div>
+            <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 block">
+              Vector Embedding count
+            </span>
+            <p className="text-[10px] text-on-surface-variant/50 mt-1 leading-normal mb-4">
+              Cumulative number of vectors stored in ChromaDB (Millions).
+            </p>
+          </div>
+
+          <div className="h-56 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={embeddingData}>
+                <defs>
+                  <linearGradient id="growthGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={8} tickLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={8} tickLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "var(--color-surface-container)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "var(--radius-default)",
+                    color: "var(--color-on-surface)",
+                    fontSize: 10,
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="vectors"
+                  stroke="var(--color-primary)"
+                  fillOpacity={1}
+                  fill="url(#growthGrad)"
+                  strokeWidth={1.5}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
       </div>
     </div>
   );
 }
+
+

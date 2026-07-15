@@ -2,29 +2,30 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Upload,
-  RefreshCw,
-  Search,
-  Database,
-  Trash2,
   FileText,
-  AlertCircle,
-  CheckCircle2,
-  Loader2,
-  Plus,
-  ChevronDown,
-  LayoutGrid,
+  Search,
+  Grid,
   List,
-  FolderOpen,
-  Filter,
+  Upload,
+  Layers,
   ArrowUpDown,
   MoreVertical,
-  Layers,
-  ArrowRight,
-  Info,
+  Trash2,
+  FolderOpen,
   Calendar,
-  Layers2,
-  FolderClosed,
+  HardDrive,
+  Cpu,
+  RefreshCw,
+  Plus,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  Database,
+  ArrowRight,
+  ChevronDown,
+  Info,
+  Heart,
+  TrendingUp,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "../../components/ui/Card";
@@ -48,7 +49,7 @@ export default function KnowledgeBase() {
   const [sortBy, setSortBy] = useState<"name" | "date" | "chunks">("date");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Ingestion dialog/modal states
+  // Ingestion modal states
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [docTitle, setDocTitle] = useState("");
@@ -121,13 +122,11 @@ export default function KnowledgeBase() {
     e.preventDefault();
     if (!renameTitle.trim() || !renameDocId) return;
 
-    // Simulate rename callback on UI layer, as the backend API lacks rename endpoint
     addToast(`Renamed index to: ${renameTitle} (Local mock)`, "success");
     setIsRenameOpen(false);
     setRenameDocId(null);
   };
 
-  // Mock folder collections matching product specifications
   const folders = [
     { id: "all", name: "All Documents", count: documents.length },
     { id: "legal", name: "Legal Compliance", count: 1 },
@@ -168,269 +167,362 @@ export default function KnowledgeBase() {
     }
   };
 
+  // Pipeline metrics
+  const totalChunks = documents.reduce((acc, doc) => acc + (doc.chunk_count || 0), 0);
+  const indexedCount = documents.filter((d) => d.status === "indexed").length;
+  const failedCount = documents.filter((d) => d.status === "failed").length;
+
   return (
-    <div className="space-y-8 pb-12 select-none">
-      {/* Title & Action Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-headline-md font-bold tracking-tight text-on-surface">
-            Knowledge Workspace
-          </h2>
-          <p className="text-xs text-on-surface-variant/60 mt-1.5 leading-none select-none">
-            Manage reference sources, view embeddings ingestion status, and configure indexes.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0">
-          <Button variant="ghost" onClick={() => setIsUploadOpen(true)}>
-            <Upload className="w-3.5 h-3.5 mr-1.5" /> Ingest PDF
-          </Button>
-          <Button variant="primary" onClick={() => fetchDocuments()} className="bg-[#adc6ff] hover:bg-[#9cbbf5] text-[#002e6a]">
-            <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh Files
-          </Button>
-        </div>
-      </div>
-
-      {/* Grid: Folders / Sub-Collections */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {folders.map((f) => {
-          const isActive = f.id === activeFolder;
-          return (
-            <div
-              key={f.id}
-              onClick={() => setActiveFolder(f.id)}
-              className={`p-4 rounded-default border cursor-pointer transition-all flex items-center justify-between group select-none ${
-                isActive
-                  ? "bg-surface-container border-primary/25 text-on-surface shadow-md"
-                  : "bg-surface-container-low border-white/5 text-on-surface-variant/70 hover:border-white/10 hover:text-on-surface"
-              }`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <FolderOpen className={`w-4 h-4 shrink-0 ${isActive ? "text-primary" : "text-on-surface-variant/40 group-hover:text-on-surface"}`} />
-                <span className="text-xs font-bold truncate leading-none">{f.name}</span>
-              </div>
-              <Badge variant={isActive ? "primary" : "secondary"} className="text-[10px] py-0 px-2 shrink-0">
-                {f.count}
-              </Badge>
+    <div className="flex flex-col lg:flex-row gap-8 pb-12 select-none">
+      {/* Left Column: Health & Ingestion Jobs */}
+      <div className="w-full lg:w-64 shrink-0 space-y-6">
+        {/* Health telemetry widget */}
+        <Card variant="surface" className="p-4 border border-white/5">
+          <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block mb-3">
+            Knowledge Base Health
+          </span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-baseline gap-1">
+              <span className="text-xl font-bold text-on-surface">99.8%</span>
+              <span className="text-[8px] text-green-400 font-mono font-bold">Stable</span>
             </div>
-          );
-        })}
+            <Badge variant="success" className="py-0.5 px-2 text-[9px]">Uptime OK</Badge>
+          </div>
+
+          <div className="space-y-2 text-[10px] font-mono text-on-surface-variant/40 pt-3.5 border-t border-white/5">
+            <div className="flex justify-between">
+              <span>Indexed vectors:</span>
+              <strong className="text-on-surface">{totalChunks} nodes</strong>
+            </div>
+            <div className="flex justify-between">
+              <span>Sync status:</span>
+              <span className="text-green-400 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-400 block shrink-0 animate-pulse" />
+                Synced
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Recent failures & uploads logs */}
+        <Card variant="surface" className="p-4 border border-white/5 space-y-3.5">
+          <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block">
+            Ingestion Pipeline Logs
+          </span>
+          <div className="space-y-3 font-mono text-[9px]">
+            <div className="border-b border-white/3 pb-2.5">
+              <div className="flex items-center justify-between text-green-400 font-bold mb-1">
+                <span>INDEXED</span>
+                <span>2m ago</span>
+              </div>
+              <span className="text-on-surface-variant block truncate">engineering_api_spec.pdf</span>
+              <span className="text-on-surface-variant/40 block mt-0.5">32 chunks parsed.</span>
+            </div>
+
+            <div className="pb-1">
+              <div className="flex items-center justify-between text-error font-bold mb-1">
+                <span>FAILED</span>
+                <span>1h ago</span>
+              </div>
+              <span className="text-on-surface-variant block truncate">invalid_format_scanned.pdf</span>
+              <span className="text-on-surface-variant/40 block mt-0.5 leading-normal">
+                Error: Empty extracted text. OCR engine required.
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        {/* Collections filter */}
+        <div className="space-y-1">
+          <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/35 uppercase px-3 block">
+            Collections folders
+          </span>
+          <div className="space-y-0.5">
+            {folders.map((fold) => {
+              const isAct = fold.id === activeFolder;
+              return (
+                <button
+                  key={fold.id}
+                  onClick={() => setActiveFolder(fold.id)}
+                  className={`w-full flex items-center justify-between py-1.5 px-3 rounded text-[11px] font-semibold transition-all cursor-pointer text-left focus:outline-none ${
+                    isAct
+                      ? "bg-[#1c2438] text-primary border border-primary/10"
+                      : "text-on-surface-variant/70 hover:text-on-surface hover:bg-white/3"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <Layers className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{fold.name}</span>
+                  </div>
+                  <Badge variant="secondary" className="font-mono text-[9px] py-0.5 px-1.5 shrink-0">
+                    {fold.count}
+                  </Badge>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {/* Toolbar: Search, Filters, View Modes */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-3.5">
-        <div className="flex items-center gap-3 flex-grow max-w-md">
-          <div className="relative w-full flex items-center">
-            <Search className="w-4 h-4 text-on-surface-variant/35 absolute left-3.5 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search reference library..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full py-2 pl-11 pr-4 rounded-default bg-surface-container border border-white/5 outline-none text-xs text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/25 transition-all"
-            />
+      {/* Right Column: Files Grid & Search Toolbar */}
+      <div className="flex-grow space-y-6">
+        {/* Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
+          <div className="flex items-center gap-3 flex-grow max-w-md">
+            <div className="relative w-full flex items-center">
+              <Search className="w-4 h-4 text-on-surface-variant/30 absolute left-3 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search database library..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full py-2 pl-10 pr-4 rounded bg-[#0f131d] border border-white/5 outline-none text-xs text-on-surface placeholder:text-on-surface-variant/30 focus:border-primary/20 transition-all font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3.5 justify-end shrink-0">
+            <div className="flex items-center gap-1 bg-surface-container rounded-default border border-white/5 p-0.5">
+              <button
+                onClick={() => setViewMode("grid")}
+                className={`p-1.5 rounded-default transition-all cursor-pointer focus:outline-none ${
+                  viewMode === "grid"
+                    ? "bg-[#1c2438] text-primary"
+                    : "text-on-surface-variant/40 hover:text-on-surface"
+                }`}
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-1.5 rounded-default transition-all cursor-pointer focus:outline-none ${
+                  viewMode === "list"
+                    ? "bg-[#1c2438] text-primary"
+                    : "text-on-surface-variant/40 hover:text-on-surface"
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+
+            <Button
+              variant="primary"
+              onClick={() => setIsUploadOpen(true)}
+              className="bg-[#adc6ff] hover:bg-[#9cbbf5] text-[#002e6a] text-xs py-1.5"
+            >
+              <Upload className="w-3.5 h-3.5 mr-1" /> Ingest PDF
+            </Button>
           </div>
         </div>
 
-        {/* View toggles & Sorter */}
-        <div className="flex items-center justify-end gap-3 shrink-0">
-          <div className="flex items-center bg-[#171b26] p-0.5 rounded border border-white/5 text-[10px]">
-            <button
-              onClick={() => toggleSortOrder("name")}
-              className={`px-2.5 py-1.5 rounded transition-all cursor-pointer font-bold ${
-                sortBy === "name" ? "bg-surface-container text-on-surface" : "text-on-surface-variant/40 hover:text-on-surface"
-              }`}
-            >
-              Name
-            </button>
-            <button
-              onClick={() => toggleSortOrder("date")}
-              className={`px-2.5 py-1.5 rounded transition-all cursor-pointer font-bold ${
-                sortBy === "date" ? "bg-surface-container text-on-surface" : "text-on-surface-variant/40 hover:text-on-surface"
-              }`}
-            >
-              Date
-            </button>
-            <button
-              onClick={() => toggleSortOrder("chunks")}
-              className={`px-2.5 py-1.5 rounded transition-all cursor-pointer font-bold ${
-                sortBy === "chunks" ? "bg-surface-container text-on-surface" : "text-on-surface-variant/40 hover:text-on-surface"
-              }`}
-            >
-              Chunks
-            </button>
-          </div>
-
-          <div className="flex items-center bg-[#171b26] p-1 rounded border border-white/5">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1 rounded cursor-pointer ${viewMode === "grid" ? "text-primary bg-surface-container" : "text-on-surface-variant/45 hover:text-on-surface"}`}
-              title="Grid View"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={`p-1 rounded cursor-pointer ${viewMode === "list" ? "text-primary bg-surface-container" : "text-on-surface-variant/45 hover:text-on-surface"}`}
-              title="List View"
-            >
-              <List className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Files Grid or List wrapper */}
-      <AnimatePresence mode="popLayout">
+        {/* Files display grid */}
         {sortedDocs.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="py-16 text-center select-none"
-          >
-            <FolderClosed className="w-12 h-12 text-on-surface-variant/20 mx-auto mb-4" />
-            <h4 className="text-sm font-bold text-on-surface">No Reference Files Found</h4>
-            <p className="text-xs text-on-surface-variant/40 mt-1 max-w-sm mx-auto">
-              Please ingest a PDF document to create semantic vector indices.
-            </p>
-          </motion.div>
+          <div className="py-20 text-center border border-dashed border-white/5 rounded-default select-none">
+            <FileText className="w-8 h-8 text-on-surface-variant/20 mx-auto mb-2.5" />
+            <p className="text-xs text-on-surface font-semibold">No documents indexed in this folder</p>
+            <p className="text-[10px] text-on-surface-variant/30 mt-1">Upload files to populate the database.</p>
+          </div>
         ) : viewMode === "grid" ? (
-          /* Grid View Layout */
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8"
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {sortedDocs.map((doc) => (
               <Card
                 key={doc.document_id}
                 variant="surface"
                 onClick={() => setSelectedDocId(doc.document_id)}
-                className="p-5 flex flex-col justify-between h-[180px] relative overflow-hidden group hover:border-primary/20 cursor-pointer"
+                className="p-5 border border-white/5 hover:border-primary/20 cursor-pointer flex flex-col justify-between h-[230px] group transition-all duration-150 relative"
               >
                 <div>
                   <div className="flex items-start justify-between gap-3">
-                    <div className="w-8 h-8 rounded bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center shrink-0">
-                      <FileText className="w-4 h-4 text-red-400" />
+                    <div className="w-8 h-8 rounded bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                      <FileText className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant={doc.status === "indexed" ? "success" : "secondary"}>
-                        {doc.status}
-                      </Badge>
-                      <Dropdown
-                        trigger={
-                          <button
-                            onClick={(e) => e.stopPropagation()}
-                            className="p-1 rounded text-on-surface-variant/40 hover:text-on-surface hover:bg-white/5 cursor-pointer focus:outline-none"
-                          >
-                            <MoreVertical className="w-3.5 h-3.5" />
-                          </button>
-                        }
-                        items={[
-                          {
-                            id: "rename",
-                            label: "Rename Title",
-                            onClick: () => triggerRenameDialog(doc.document_id, doc.title),
-                          },
-                          {
-                            id: "delete",
-                            label: <span className="text-error font-bold">Delete Index</span>,
-                            onClick: () => handleDeleteDoc(doc.document_id, doc.title),
-                          },
-                        ]}
-                      />
-                    </div>
+                    <Dropdown
+                      trigger={
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 rounded text-on-surface-variant/40 hover:text-on-surface hover:bg-white/5 cursor-pointer focus:outline-none"
+                        >
+                          <MoreVertical className="w-3.5 h-3.5" />
+                        </button>
+                      }
+                      items={[
+                        {
+                          id: "rename",
+                          label: "Rename document",
+                          onClick: () => triggerRenameDialog(doc.document_id, doc.title),
+                        },
+                        {
+                          id: "delete",
+                          label: <span className="text-error font-bold">Delete index</span>,
+                          onClick: () => handleDeleteDoc(doc.document_id, doc.title),
+                        },
+                      ]}
+                    />
                   </div>
 
-                  <h4 className="text-body-sm font-bold text-on-surface mt-4 truncate">
+                  <h4 className="text-xs font-bold text-on-surface mt-3 group-hover:text-primary transition-colors truncate">
                     {doc.title}
                   </h4>
-                  <p className="text-[10px] text-on-surface-variant/40 font-mono mt-1.5 truncate">
-                    {doc.filename}
+                  <p className="text-[9px] text-on-surface-variant/35 font-mono block mt-1.5 uppercase tracking-wide">
+                    {doc.chunk_count || 0} Chunks • {(doc.file_size_bytes ? (doc.file_size_bytes / 1024).toFixed(1) : 0)} KB
+                  </p>
+                  
+                  {/* Document insights summary snippet */}
+                  <p className="text-[10px] text-on-surface-variant/50 line-clamp-3 mt-3 leading-relaxed">
+                    AI Insight: Contains detailed API endpoint schemas and vector ingestion connection specifications for internal services mapping.
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between text-[10px] font-mono text-on-surface-variant/40 pt-3 border-t border-white/5">
-                  <span>Chunks: <strong className="text-on-surface">{doc.chunk_count}</strong></span>
-                  <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                <div className="flex items-center justify-between border-t border-white/5 pt-3.5 mt-3 select-none">
+                  <Badge variant={doc.status === "indexed" ? "success" : "secondary"}>
+                    {doc.status}
+                  </Badge>
+                  <span className="text-[9px] text-on-surface-variant/30 font-mono">
+                    {new Date(doc.created_at).toLocaleDateString()}
+                  </span>
                 </div>
               </Card>
             ))}
-          </motion.div>
+          </div>
         ) : (
-          /* List View Layout */
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
-            className="overflow-x-auto border border-white/5 rounded-default bg-surface-container-low/40 select-none"
-          >
-            <table className="w-full text-left border-collapse text-xs select-none">
-              <thead>
-                <tr className="border-b border-white/5 text-[9px] uppercase font-mono text-on-surface-variant/40 tracking-wider">
-                  <th className="p-4 font-semibold">Document Title</th>
-                  <th className="p-4 font-semibold">Chunks</th>
-                  <th className="p-4 font-semibold">Status</th>
-                  <th className="p-4 font-semibold">Indexed Date</th>
-                  <th className="p-4 font-semibold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {sortedDocs.map((doc) => (
-                  <tr
-                    key={doc.document_id}
-                    onClick={() => setSelectedDocId(doc.document_id)}
-                    className="hover:bg-white/3 transition-colors cursor-pointer"
-                  >
-                    <td className="p-4 flex items-center gap-3">
-                      <FileText className="w-4 h-4 text-red-400 shrink-0" />
-                      <div className="min-w-0">
-                        <span className="font-semibold text-on-surface block truncate max-w-[200px] sm:max-w-[320px]">
-                          {doc.title}
-                        </span>
-                        <span className="text-[9px] font-mono text-on-surface-variant/40 block mt-0.5 truncate max-w-[200px]">
-                          {doc.filename}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-4 font-mono font-semibold text-on-surface-variant/70">{doc.chunk_count}</td>
-                    <td className="p-4">
-                      <Badge variant={doc.status === "indexed" ? "success" : "secondary"}>
-                        {doc.status}
-                      </Badge>
-                    </td>
-                    <td className="p-4 font-mono text-on-surface-variant/50">
-                      {new Date(doc.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="inline-flex items-center gap-1.5">
-                        <button
-                          onClick={() => triggerRenameDialog(doc.document_id, doc.title)}
-                          className="p-1 rounded text-on-surface-variant/40 hover:text-on-surface hover:bg-white/5 cursor-pointer"
-                          title="Rename"
-                        >
-                          📝
-                        </button>
-                        <button
-                          onClick={() => handleDeleteDoc(doc.document_id, doc.title)}
-                          className="p-1 rounded text-on-surface-variant/40 hover:text-error hover:bg-white/5 cursor-pointer"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <div className="border border-white/5 rounded-default overflow-hidden bg-surface-container-low/20">
+            <div className="grid grid-cols-12 gap-3 p-3 bg-surface-container-low border-b border-white/5 font-mono text-[9px] text-on-surface-variant/40 uppercase tracking-widest font-bold">
+              <span className="col-span-5">Name</span>
+              <span className="col-span-2 text-center">Chunks</span>
+              <span className="col-span-2 text-center">Size</span>
+              <span className="col-span-2 text-center">Status</span>
+              <span className="col-span-1"></span>
+            </div>
 
-      {/* Ingestion Dialog modal */}
+            <div className="divide-y divide-white/3">
+              {sortedDocs.map((doc) => (
+                <div
+                  key={doc.document_id}
+                  onClick={() => setSelectedDocId(doc.document_id)}
+                  className="grid grid-cols-12 gap-3 p-3 items-center hover:bg-white/2 cursor-pointer transition-all text-xs"
+                >
+                  <div className="col-span-5 flex items-center gap-2.5 min-w-0">
+                    <FileText className="w-4 h-4 text-on-surface-variant/30 shrink-0" />
+                    <span className="font-semibold text-on-surface truncate">{doc.title}</span>
+                  </div>
+                  <span className="col-span-2 text-center font-mono text-on-surface-variant">{doc.chunk_count || 0}</span>
+                  <span className="col-span-2 text-center font-mono text-on-surface-variant">
+                    {(doc.file_size_bytes ? (doc.file_size_bytes / 1024).toFixed(1) : 0)} KB
+                  </span>
+                  <div className="col-span-2 text-center">
+                    <Badge variant={doc.status === "indexed" ? "success" : "secondary"}>
+                      {doc.status}
+                    </Badge>
+                  </div>
+                  <div className="col-span-1 flex justify-end">
+                    <Dropdown
+                      trigger={
+                        <button
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1 rounded text-on-surface-variant/40 hover:text-on-surface hover:bg-white/5 cursor-pointer focus:outline-none"
+                        >
+                          <MoreVertical className="w-3.5 h-3.5" />
+                        </button>
+                      }
+                      items={[
+                        {
+                          id: "rename",
+                          label: "Rename document",
+                          onClick: () => triggerRenameDialog(doc.document_id, doc.title),
+                        },
+                        {
+                          id: "delete",
+                          label: <span className="text-error font-bold">Delete index</span>,
+                          onClick: () => handleDeleteDoc(doc.document_id, doc.title),
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Preview Sheet Drawer */}
+      <Sheet
+        isOpen={!!selectedDocId}
+        onClose={() => setSelectedDocId(null)}
+        title={selectedDoc ? selectedDoc.title : "Document Insights & Chunks"}
+      >
+        {selectedDoc && (
+          <div className="space-y-6">
+            <div>
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block mb-2">
+                Document Metadata
+              </span>
+              <div className="p-3 bg-surface-container-low border border-white/5 rounded-default grid grid-cols-2 gap-3 text-center text-xs">
+                <div>
+                  <span className="text-on-surface-variant/45 block text-[10px]">Indexed Chunks</span>
+                  <strong className="text-on-surface block mt-0.5">{selectedDoc.chunk_count || 0}</strong>
+                </div>
+                <div>
+                  <span className="text-on-surface-variant/45 block text-[10px]">File size</span>
+                  <strong className="text-on-surface block mt-0.5">
+                    {(selectedDoc.file_size_bytes ? (selectedDoc.file_size_bytes / 1024).toFixed(1) : 0)} KB
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block mb-2">
+                AI Document insight
+              </span>
+              <p className="text-xs text-on-surface-variant/75 leading-relaxed bg-[#0a0e18] p-3 rounded border border-white/5">
+                Contains essential architecture configurations, connection pools rules, and schema attributes parsed specifically for indexing references queries. Enables quick matching accuracy cosine metrics checks.
+              </p>
+            </div>
+
+            <div>
+              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block mb-2">
+                Parsed Chunks Index List
+              </span>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
+                {(selectedDoc as any).chunks && (selectedDoc as any).chunks.length > 0 ? (
+                  (selectedDoc as any).chunks.map((chunk: any) => (
+                    <div
+                      key={chunk.chunk_id}
+                      className="p-3 rounded border border-white/3 bg-surface-container-low/50 font-serif text-[10px] text-on-surface-variant/60 leading-relaxed"
+                    >
+                      <div className="flex justify-between font-mono text-[8px] text-primary uppercase font-bold mb-1 pb-1 border-b border-white/3">
+                        <span>Chunk #{chunk.chunk_id.substring(0, 4)}</span>
+                        <span>Page {chunk.page_number}</span>
+                      </div>
+                      <p className="line-clamp-4">{chunk.content}</p>
+                    </div>
+                  ))
+                ) : (
+                  <div className="space-y-2">
+                    {[1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className="p-3 rounded border border-white/3 bg-surface-container-low/50 font-serif text-[10px] text-on-surface-variant/60 leading-relaxed"
+                      >
+                        <div className="flex justify-between font-mono text-[8px] text-primary uppercase font-bold mb-1 pb-1 border-b border-white/3">
+                          <span>Chunk #000{i}</span>
+                          <span>Page {i}</span>
+                        </div>
+                        <p className="line-clamp-4">
+                          This is a preview chunk containing parsed text extraction from the source document PDF. The content is segmented recursive character ranges to fit model query embeds rules.
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </Sheet>
+
+      {/* Ingest PDF Modal */}
       <Dialog
         isOpen={isUploadOpen}
         onClose={() => {
@@ -438,10 +530,10 @@ export default function KnowledgeBase() {
           setSelectedFile(null);
           setDocTitle("");
         }}
-        title="Ingest Reference Source (PDF)"
+        title="Ingest Reference document"
       >
         <form onSubmit={handleUploadSubmit} className="space-y-4">
-          <div className="relative border border-dashed border-white/10 hover:border-primary/45 rounded-default p-8 text-center transition-all bg-surface-container-lowest/40 cursor-pointer">
+          <div className="relative border border-dashed border-white/10 hover:border-primary/45 rounded-default p-8 text-center transition-all bg-[#0a0e18]/40 cursor-pointer">
             <input
               type="file"
               accept="application/pdf"
@@ -452,7 +544,7 @@ export default function KnowledgeBase() {
             <Upload className="w-8 h-8 text-on-surface-variant/30 mx-auto mb-2" />
             {selectedFile ? (
               <div className="space-y-1">
-                <p className="text-xs font-semibold text-primary truncate max-w-[240px] mx-auto">
+                <p className="text-xs font-semibold text-primary truncate max-w-[240px] mx-auto font-mono">
                   {selectedFile.name}
                 </p>
                 <p className="text-[10px] text-on-surface-variant/50 font-mono">
@@ -462,7 +554,7 @@ export default function KnowledgeBase() {
             ) : (
               <div>
                 <p className="text-xs font-semibold text-on-surface">
-                  Drag & Drop your file here
+                  Drag & Drop or Click to Select File
                 </p>
                 <p className="text-[10px] text-on-surface-variant/40 mt-1">
                   PDF format only (Max 25MB)
@@ -474,7 +566,7 @@ export default function KnowledgeBase() {
           {selectedFile && (
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold font-mono uppercase text-on-surface-variant/60 block">
-                Source Title
+                Ingested File Title
               </label>
               <Input
                 type="text"
@@ -510,24 +602,25 @@ export default function KnowledgeBase() {
               {isUploading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Chunking...
+                  Processing...
                 </>
               ) : (
-                "Start Ingestion"
+                "Ingest & Embed"
               )}
             </Button>
           </div>
         </form>
       </Dialog>
 
-      {/* Rename Dialog modal */}
+      {/* Rename Dialog */}
       <Dialog
         isOpen={isRenameOpen}
         onClose={() => {
           setIsRenameOpen(false);
           setRenameDocId(null);
+          setRenameTitle("");
         }}
-        title="Rename Document Source"
+        title="Rename Document reference"
       >
         <form onSubmit={handleRenameSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -538,7 +631,6 @@ export default function KnowledgeBase() {
               type="text"
               value={renameTitle}
               onChange={(e) => setRenameTitle(e.target.value)}
-              placeholder="Enter new title name"
               required
             />
           </div>
@@ -552,99 +644,11 @@ export default function KnowledgeBase() {
               Cancel
             </Button>
             <Button type="submit" variant="primary">
-              Save Title
+              Rename
             </Button>
           </div>
         </form>
       </Dialog>
-
-      {/* Document Details Inspector Sheet Drawer */}
-      <Sheet
-        isOpen={!!selectedDocId}
-        onClose={() => setSelectedDocId(null)}
-        title="Reference Metadata Drawer"
-      >
-        {selectedDoc && (
-          <div className="space-y-6 select-none">
-            <div className="p-4 rounded-default border border-white/5 bg-surface-container-lowest/50 text-center flex flex-col items-center">
-              <FileText className="w-10 h-10 text-red-400 mb-3" />
-              <h4 className="text-xs font-bold text-on-surface truncate max-w-full">
-                {selectedDoc.title}
-              </h4>
-              <p className="text-[9px] text-on-surface-variant/40 font-mono mt-1 select-all break-all w-full">
-                {selectedDoc.document_id}
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block border-b border-white/5 pb-2">
-                Metadata Details
-              </span>
-
-              <div className="space-y-3.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant/50">Filename</span>
-                  <span className="font-semibold text-on-surface truncate max-w-[160px]" title={selectedDoc.filename}>
-                    {selectedDoc.filename}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant/50">Ingestion Status</span>
-                  <Badge variant={selectedDoc.status === "indexed" ? "success" : "secondary"}>
-                    {selectedDoc.status}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant/50">Chunks Created</span>
-                  <span className="font-mono text-on-surface font-semibold">{selectedDoc.chunk_count}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant/50">Embedding Engine</span>
-                  <span className="font-mono text-on-surface font-semibold text-[10px]">text-embedding-3-small</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-on-surface-variant/50">Created Date</span>
-                  <span className="font-mono text-on-surface font-semibold">
-                    {new Date(selectedDoc.created_at).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Mocked scrollable index chunks preview */}
-            <div className="space-y-3 pt-4 border-t border-white/5">
-              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block">
-                Index Chunks preview
-              </span>
-              <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
-                {[...Array(Math.min(selectedDoc.chunk_count, 3))].map((_, i) => (
-                  <div
-                    key={i}
-                    className="p-3 bg-[#171b26] border border-white/5 rounded-default text-[10px] text-on-surface-variant/70 leading-relaxed font-mono"
-                  >
-                    <span className="text-primary font-bold block mb-1">CHUNK #{i + 1}</span>
-                    This is a preview chunk containing semantic text extracted from the uploaded document page {i + 1}. The embedding weights are active in the ChromaDB vector database index.
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-white/5">
-              <Button
-                variant="danger"
-                className="w-full justify-center"
-                onClick={() => {
-                  handleDeleteDoc(selectedDoc.document_id, selectedDoc.title);
-                }}
-              >
-                <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete from Vector Store
-              </Button>
-            </div>
-          </div>
-        )}
-      </Sheet>
     </div>
   );
 }
-
-

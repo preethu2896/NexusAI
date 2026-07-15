@@ -21,6 +21,9 @@ import {
   Lock,
   Code,
   X,
+  Play,
+  PlayCircle,
+  StopCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "../../components/ui/Card";
@@ -54,6 +57,9 @@ export default function Agents() {
       prompt: "Decompose user query Q into a sequence of dependency tasks [T1, T2, ... Tn] based on reference context...",
       temp: 0.2,
       maxTokens: 2048,
+      model: "GPT-4o",
+      currentTask: "Analyzing database schemas...",
+      history: ["success", "success", "success", "success", "success"],
     },
     {
       id: "retriever",
@@ -69,6 +75,9 @@ export default function Agents() {
       prompt: "Extract top K documents relevant to the vector weights matching query embeddings...",
       temp: 0.1,
       maxTokens: 1024,
+      model: "GPT-4o",
+      currentTask: "Idle. Waiting for prompt route...",
+      history: ["success", "success", "warning", "success", "success"],
     },
     {
       id: "research",
@@ -84,6 +93,9 @@ export default function Agents() {
       prompt: "Synthesize source files context to write an analytical summary with page citation notes...",
       temp: 0.4,
       maxTokens: 4096,
+      model: "Claude 3.5 Sonnet",
+      currentTask: "Idle. Thread listening...",
+      history: ["success", "failed", "success", "success", "success"],
     },
     {
       id: "sql",
@@ -99,6 +111,9 @@ export default function Agents() {
       prompt: "Convert prompt P into valid PostgreSQL query syntax using connection schema details...",
       temp: 0.0,
       maxTokens: 512,
+      model: "GPT-4o-mini",
+      currentTask: "Executing SELECT query mapping...",
+      history: ["success", "success", "success", "success", "success"],
     },
     {
       id: "web",
@@ -114,6 +129,9 @@ export default function Agents() {
       prompt: "Query live web index for recent topics and filter outputs based on source credibility...",
       temp: 0.3,
       maxTokens: 1024,
+      model: "Brave-v2",
+      currentTask: "Connection disconnected.",
+      history: ["failed", "failed", "success", "failed", "success"],
     },
     {
       id: "memory",
@@ -129,21 +147,9 @@ export default function Agents() {
       prompt: "Update user context graph with extracted session facts and user workspace preferences...",
       temp: 0.2,
       maxTokens: 512,
-    },
-    {
-      id: "reflection",
-      name: "Reflection Agent",
-      purpose: "Verification and audit alignment",
-      desc: "Reviews generated outputs for formatting compliance, fact checks citations, and guards brand alignment.",
-      status: "Running",
-      version: "v2.1.0",
-      latency: "85ms",
-      memory: "128MB",
-      lastExec: "14s ago",
-      tools: ["Factuality checker", "Brand policy filter"],
-      prompt: "Evaluate response R against source documents D for factual grounding errors or hallucination issues...",
-      temp: 0.0,
-      maxTokens: 2048,
+      model: "GPT-4o-mini",
+      currentTask: "Idle. Prefetch cached keys...",
+      history: ["success", "success", "success", "success", "success"],
     },
   ]);
 
@@ -160,22 +166,54 @@ export default function Agents() {
     addToast("Initializing Agent build deployment pipeline (mock)", "info");
   };
 
+  const handleQuickRun = (id: string, name: string) => {
+    addToast(`Executing trigger call for: ${name}...`, "info");
+    setAgents(prev =>
+      prev.map(a => {
+        if (a.id === id) {
+          return {
+            ...a,
+            status: "Running",
+            currentTask: "Running mock pipeline execution...",
+            lastExec: "Now",
+          };
+        }
+        return a;
+      })
+    );
+    setTimeout(() => {
+      setAgents(prev =>
+        prev.map(a => {
+          if (a.id === id) {
+            return {
+              ...a,
+              status: "Ready",
+              currentTask: "Idle. Task executed successfully.",
+            };
+          }
+          return a;
+        })
+      );
+      addToast(`Execution completed for ${name}`, "success");
+    }, 2000);
+  };
+
   return (
-    <div className="space-y-8 pb-12 select-none">
-      {/* Title block */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 pb-12 select-none">
+      {/* Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/5 pb-4">
         <div>
           <h2 className="text-headline-md font-bold tracking-tight text-on-surface">
             Agent Marketplace
           </h2>
-          <p className="text-xs text-on-surface-variant/60 mt-1.5 leading-none">
-            Orchestrate specialized AI execution units with custom prompt scripts and system access keys.
+          <p className="text-xs text-on-surface-variant/60 mt-1">
+            Deploy, run, and monitor specialized AI execution units with localized system access.
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <Button variant="primary" onClick={handleDeployNewAgent} className="bg-[#adc6ff] hover:bg-[#9cbbf5] text-[#002e6a]">
-            <Plus className="w-4 h-4 mr-1.5" /> Deploy Agent
+          <Button variant="primary" onClick={handleDeployNewAgent} className="bg-[#adc6ff] hover:bg-[#9cbbf5] text-[#002e6a] text-xs py-1.5">
+            <Plus className="w-3.5 h-3.5 mr-1" /> Deploy Agent
           </Button>
         </div>
       </div>
@@ -194,42 +232,82 @@ export default function Agents() {
             <Card
               key={agent.id}
               variant="surface"
-              className="p-6 flex flex-col justify-between h-[280px] border border-white/5 hover:border-primary/20 transition-all duration-150 group"
+              className="p-5 flex flex-col justify-between min-h-[300px] border border-white/5 hover:border-primary/20 transition-all duration-150 group relative"
             >
               <div>
                 <div className="flex items-start justify-between">
-                  <div className="w-9 h-9 rounded bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                    <Bot className="w-5 h-5 text-primary" />
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                      <Bot className="w-4.5 h-4.5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-on-surface truncate group-hover:text-primary transition-colors">
+                        {agent.name}
+                      </h4>
+                      <span className="text-[8px] font-mono text-on-surface-variant/40 block mt-0.5">
+                        Model: {agent.model} • {agent.version}
+                      </span>
+                    </div>
                   </div>
-                  <Badge variant={statusBadges[agent.status as keyof typeof statusBadges] || "secondary"}>
+                  <Badge variant={statusBadges[agent.status as keyof typeof statusBadges] || "secondary"} className="py-0.5 px-2 text-[9px]">
                     {agent.status}
                   </Badge>
                 </div>
-                <h4 className="text-body-sm font-bold text-on-surface mt-4 tracking-wide">
-                  {agent.name}
-                </h4>
-                <p className="text-xs text-on-surface-variant/65 mt-2 line-clamp-3 leading-relaxed">
+
+                <p className="text-xs text-on-surface-variant/65 mt-3 line-clamp-2 leading-relaxed">
                   {agent.desc}
                 </p>
+
+                {/* Live task execution */}
+                <div className="bg-black/20 p-2.5 rounded border border-white/3 mt-3.5 space-y-1">
+                  <span className="text-[8px] font-mono text-on-surface-variant/40 block uppercase tracking-wider">
+                    Current Execution Node
+                  </span>
+                  <span className="text-[10px] font-mono text-primary block truncate font-semibold">
+                    {agent.currentTask}
+                  </span>
+                </div>
               </div>
 
               <div>
-                <div className="grid grid-cols-2 gap-y-2.5 text-[10px] font-mono text-on-surface-variant/40 pt-4 border-t border-white/5">
+                {/* Metrics & History ticks */}
+                <div className="grid grid-cols-2 gap-y-2 text-[9px] font-mono text-on-surface-variant/40 pt-3 border-t border-white/5 mt-3">
                   <div>
                     SPEED: <strong className="text-on-surface">{agent.latency}</strong>
                   </div>
                   <div>
                     MEM: <strong className="text-on-surface">{agent.memory}</strong>
                   </div>
-                  <div>
-                    VERSION: <strong className="text-on-surface">{agent.version}</strong>
-                  </div>
-                  <div>
-                    LAST RUN: <strong className="text-on-surface">{agent.lastExec}</strong>
+                  <div className="col-span-2 flex items-center gap-1.5 pt-1">
+                    <span>STATUS HISTORY:</span>
+                    <div className="flex items-center gap-1">
+                      {agent.history.map((h, hIdx) => {
+                        let col = "bg-white/10";
+                        if (h === "success") col = "bg-green-400";
+                        if (h === "warning") col = "bg-yellow-500";
+                        if (h === "failed") col = "bg-error";
+                        return (
+                          <span
+                            key={hIdx}
+                            className={`w-1.5 h-1.5 rounded-full ${col} block`}
+                            title={h}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-3.5 border-t border-white/5 mt-3 select-none">
+                <div className="flex justify-between items-center pt-3 border-t border-white/5 mt-3 select-none">
+                  {/* Quick run trigger button */}
+                  <button
+                    onClick={() => handleQuickRun(agent.id, agent.name)}
+                    disabled={agent.status === "Offline" || agent.status === "Running"}
+                    className="flex items-center gap-1 text-[10px] font-bold text-on-surface-variant/60 hover:text-on-surface disabled:opacity-30 disabled:pointer-events-none cursor-pointer focus:outline-none"
+                  >
+                    <Play className="w-3 h-3 text-green-400" /> Run Agent
+                  </button>
+
                   <button
                     onClick={() => {
                       setSelectedAgentId(agent.id);
@@ -334,7 +412,7 @@ export default function Agents() {
                   <input
                     type="number"
                     defaultValue={activeAgent.maxTokens}
-                    className="w-full p-2 rounded bg-surface-container-low border border-white/5 text-xs text-on-surface focus:border-primary/20 outline-none"
+                    className="w-full p-2 rounded bg-surface-container-low border border-white/5 text-xs text-on-surface focus:border-primary/20 outline-none font-mono"
                   />
                 </div>
 
