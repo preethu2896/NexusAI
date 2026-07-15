@@ -1,7 +1,7 @@
 import React from "react";
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "surface" | "glass" | "highest";
+  variant?: "surface" | "glass" | "highest" | "lowest";
   glowOnHover?: boolean;
 }
 
@@ -12,23 +12,31 @@ export const Card: React.FC<CardProps> = ({
   className = "",
   ...props
 }) => {
-  const baseStyles = "rounded-lg border-glow-subtle transition-all duration-200 ease-in-out p-5";
+  // Card base styles: radius-lg (1rem/16px), 1px solid white/5 border
+  const baseStyles =
+    "rounded-lg border-glow-subtle transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] p-6 shadow-sm";
 
   let variantStyles = "";
   if (variant === "surface") {
-    variantStyles = "bg-surface-container-low";
+    variantStyles = "bg-surface-container";
   } else if (variant === "glass") {
-    variantStyles = "bg-[#171b26]/60 backdrop-blur-md";
+    variantStyles = "bg-surface-container-low/70 backdrop-blur-lg";
   } else if (variant === "highest") {
     variantStyles = "bg-surface-container-high";
+  } else if (variant === "lowest") {
+    variantStyles = "bg-surface-container-lowest";
   }
 
+  // Hover styles: increased border luminosity (white/10) and soft shadow
   const hoverStyles = glowOnHover
-    ? "hover:border-white/10 hover:shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+    ? "hover:border-[rgba(255,255,255,0.15)] hover:shadow-md hover:translate-y-[-1px]"
     : "";
 
   return (
-    <div className={`${baseStyles} ${variantStyles} ${hoverStyles} ${className}`} {...props}>
+    <div
+      className={`${baseStyles} ${variantStyles} ${hoverStyles} ${className}`}
+      {...props}
+    >
       {children}
     </div>
   );

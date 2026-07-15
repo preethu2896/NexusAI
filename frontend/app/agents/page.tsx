@@ -88,40 +88,42 @@ print(response.answer)
   ];
 
   return (
-    <div className="space-y-8 max-w-6xl">
+    <div className="space-y-6 lg:space-y-8">
       {/* Grid of Agent Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
         {agentsList.map((agent) => (
-          <Card key={agent.name} className="flex flex-col justify-between h-[240px]">
+          <Card key={agent.name} variant="surface" className="flex flex-col justify-between h-[260px] p-6" glowOnHover>
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
-                    <Bot className="w-4 h-4 text-primary" />
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                    <Bot className="w-5 h-5 text-primary" />
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-on-surface">
+                  <div className="min-w-0">
+                    <h4 className="text-body-sm font-bold text-on-surface truncate">
                       {agent.name}
                     </h4>
-                    <span className="text-[10px] text-on-surface-variant/40 font-semibold uppercase tracking-wider block">
+                    <span className="text-label-caps text-on-surface-variant/40 block truncate mt-0.5">
                       {agent.role}
                     </span>
                   </div>
                 </div>
-                <Badge variant="success">{agent.status}</Badge>
+                <Badge variant="success" className="shrink-0 text-[10px] py-0 px-2">
+                  {agent.status}
+                </Badge>
               </div>
-              <p className="text-xs text-on-surface-variant/60 line-clamp-3 leading-relaxed mt-2">
+              <p className="text-body-sm text-on-surface-variant/75 line-clamp-3 leading-relaxed mt-4">
                 {agent.description}
               </p>
             </div>
-            
-            <div className="pt-4 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-on-surface-variant/50">
+
+            <div className="pt-4 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-on-surface-variant/50">
               <div className="flex items-center gap-3">
-                <span>Model: <strong className="text-on-surface-variant">{agent.model}</strong></span>
-                <span>Temp: <strong className="text-on-surface-variant">{agent.temperature}</strong></span>
+                <span>Model: <strong className="text-on-surface-variant/70">{agent.model}</strong></span>
+                <span>Temp: <strong className="text-on-surface-variant/70">{agent.temperature}</strong></span>
               </div>
-              <button className="text-primary hover:underline cursor-pointer flex items-center gap-1 font-semibold">
-                <Settings className="w-3 h-3" /> Config
+              <button className="text-primary hover:text-[#9cbbf5] transition-colors cursor-pointer flex items-center gap-1 font-semibold focus:outline-none bg-transparent border-none">
+                <Settings className="w-3.5 h-3.5" /> Config
               </button>
             </div>
           </Card>
@@ -129,17 +131,17 @@ print(response.answer)
       </div>
 
       {/* Code SDK Section */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
+      <Card variant="surface">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-2">
-            <Terminal className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-on-surface font-mono">
+            <Terminal className="w-4 h-4 text-primary shrink-0" />
+            <h3 className="text-label-caps text-on-surface tracking-wider">
               Programmatic Execution (Python SDK)
             </h3>
           </div>
           <button
             onClick={handleCopyCode}
-            className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-on-surface bg-white/5 px-2.5 py-1 rounded border border-white/5 transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 text-xs text-on-surface-variant hover:text-on-surface bg-white/5 hover:bg-white/10 active:scale-[0.98] px-3 py-1.5 rounded-default border border-white/5 transition-all cursor-pointer font-medium focus:outline-none"
           >
             {copiedCode ? (
               <>
@@ -154,9 +156,9 @@ print(response.answer)
             )}
           </button>
         </div>
-        <div className="relative rounded-md overflow-hidden bg-surface-container-lowest border border-white/5">
-          <pre className="p-4 font-mono text-xs text-green-400 overflow-x-auto leading-relaxed">
-            <code>{sdkCode}</code>
+        <div className="relative rounded-default overflow-hidden bg-surface-container-lowest border border-white/5">
+          <pre className="p-4 overflow-x-auto leading-relaxed custom-scrollbar">
+            <code className="text-mono-code text-green-400 block">{sdkCode}</code>
           </pre>
         </div>
       </Card>

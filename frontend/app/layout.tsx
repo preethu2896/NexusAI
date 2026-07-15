@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "../components/layout/Sidebar";
-import { Topbar } from "../components/layout/Topbar";
+import { LayoutContent } from "../components/layout/LayoutContent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,19 +30,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
     >
       <body className="h-full bg-surface text-on-surface flex overflow-hidden">
-        {/* Sidebar navigation */}
-        <Sidebar />
-
-        {/* Viewport container */}
-        <div className="flex-grow flex flex-col h-full overflow-hidden">
-          {/* Topbar action panel */}
-          <Topbar />
-
-          {/* Page view container */}
-          <main className="flex-grow overflow-y-auto custom-scrollbar bg-surface p-8">
-            {children}
-          </main>
-        </div>
+        <LayoutContent>{children}</LayoutContent>
       </body>
     </html>
   );
