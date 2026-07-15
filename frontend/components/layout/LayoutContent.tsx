@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { useUIStore } from "../../store/uiStore";
+import { ToastContainer } from "../ui/Toast";
 
 export const LayoutContent: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -78,6 +79,7 @@ export const LayoutContent: React.FC<{ children: React.ReactNode }> = ({
           </div>
         </main>
       </div>
+      <ToastContainer />
     </div>
   );
 };

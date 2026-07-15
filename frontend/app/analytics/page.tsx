@@ -4,193 +4,145 @@ import React, { useState } from "react";
 import {
   ComposedChart,
   AreaChart,
+  BarChart,
+  PieChart,
   Area,
   Bar,
   Line,
+  Pie,
+  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
-  BarChart,
-  Cell,
 } from "recharts";
 import {
-  FileText,
   TrendingUp,
+  Clock,
   Zap,
-  ArrowUpRight,
-  Download,
-  CheckCircle,
-  Network,
+  Activity,
+  HardDrive,
   Cpu,
-  ChevronDown,
+  RefreshCw,
+  Award,
 } from "lucide-react";
 import { Card } from "../../components/ui/Card";
+import { Tabs } from "../../components/ui/Tabs";
+import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
+import { useToastStore } from "../../store/toastStore";
 
 export default function Analytics() {
-  const [timeframe, setTimeframe] = useState("Day");
+  const { addToast } = useToastStore();
+  const [timeframe, setTimeframe] = useState("30d");
 
-  // Mock data matching the Mon-Sun "Infrastructure Scaling" chart in the mockup
-  const infraData = [
-    { name: "MON", docs: 30, tokens: 40, fill: "rgba(255,255,255,0.08)" },
-    { name: "TUE", docs: 45, tokens: 48, fill: "rgba(255,255,255,0.08)" },
-    { name: "WED", docs: 35, tokens: 50, fill: "rgba(255,255,255,0.08)" },
-    { name: "THU", docs: 58, tokens: 55, fill: "rgba(255,255,255,0.08)" },
-    { name: "FRI", docs: 82, tokens: 58, fill: "var(--color-primary)" }, // highlighted
-    { name: "SAT", docs: 78, tokens: 62, fill: "var(--color-primary)" }, // highlighted
-    { name: "SUN", docs: 88, tokens: 68, fill: "var(--color-primary)" }, // highlighted
+  // Latency & Token Usage Composed Data
+  const latencyData = [
+    { name: "01:00", latency: 110, tokens: 400 },
+    { name: "02:00", latency: 142, tokens: 620 },
+    { name: "03:00", latency: 98, tokens: 350 },
+    { name: "04:00", latency: 165, tokens: 890 },
+    { name: "05:00", latency: 120, tokens: 520 },
+    { name: "06:00", latency: 135, tokens: 710 },
+    { name: "07:00", latency: 142, tokens: 750 },
   ];
 
-  // Mock data matching the Jan-Dec "Embedding Growth" chart
+  // Embedding Growth Area Data
   const embeddingData = [
-    { name: "JAN", value: 0.5 },
-    { name: "FEB", value: 0.8 },
-    { name: "MAR", value: 1.2 },
-    { name: "APR", value: 1.5 },
-    { name: "MAY", value: 2.1 },
-    { name: "JUN", value: 2.6 },
-    { name: "JUL", value: 3.2 },
-    { name: "AUG", value: 3.8 },
-    { name: "SEP", value: 4.1 },
-    { name: "OCT", value: 4.5 },
-    { name: "NOV", value: 4.8 },
-    { name: "DEC", value: 5.2 },
+    { name: "Jan", vectors: 1.2 },
+    { name: "Feb", vectors: 1.8 },
+    { name: "Mar", vectors: 2.5 },
+    { name: "Apr", vectors: 3.1 },
+    { name: "May", vectors: 4.2 },
+    { name: "Jun", vectors: 4.8 },
   ];
 
-  // Mock data for conversation volume bar chart
-  const volumeData = [
-    { name: "1", value: 10, fill: "rgba(255,255,255,0.08)" },
-    { name: "2", value: 25, fill: "rgba(255,255,255,0.08)" },
-    { name: "3", value: 45, fill: "rgba(255,255,255,0.15)" },
-    { name: "4", value: 70, fill: "var(--color-secondary)" },
-    { name: "5", value: 55, fill: "var(--color-primary)" },
-    { name: "6", value: 90, fill: "var(--color-primary)" },
-    { name: "7", value: 40, fill: "rgba(255,255,255,0.15)" },
-    { name: "8", value: 20, fill: "rgba(255,255,255,0.08)" },
+  // Similarity Distribution Bar Data
+  const similarityData = [
+    { range: "0.0-0.2", count: 12 },
+    { range: "0.2-0.4", count: 48 },
+    { range: "0.4-0.6", count: 142 },
+    { range: "0.6-0.8", count: 854 },
+    { range: "0.8-1.0", count: 2410 }, // highlighted
   ];
+
+  // Cache Hit Ratio Pie Data
+  const cacheData = [
+    { name: "Cache Hits", value: 65, fill: "var(--color-primary)" },
+    { name: "Vector Search Misses", value: 35, fill: "rgba(255,255,255,0.08)" },
+  ];
+
+  // Model usage chart data
+  const modelUsageData = [
+    { name: "GPT-4o", queries: 12480, fill: "var(--color-primary)" },
+    { name: "GPT-4o-mini", queries: 8240, fill: "var(--color-secondary)" },
+    { name: "Claude 3.5 Sonnet", queries: 2840, fill: "rgba(255,255,255,0.15)" },
+  ];
+
+  const handleRefreshAnalytics = () => {
+    addToast("Re-fetching systems telemetry logs...", "info");
+  };
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* 6-Column Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <Card variant="surface" className="p-4 flex flex-col justify-between">
-          <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">
-            Total Documents
-          </span>
-          <div className="flex items-baseline gap-1.5 mt-2">
-            <span className="text-xl font-bold text-on-surface">12,482</span>
-            <span className="text-[9px] text-green-400 font-mono font-bold flex items-center">
-              +4.2% <TrendingUp className="w-2.5 h-2.5 ml-0.5" />
-            </span>
-          </div>
-        </Card>
+    <div className="space-y-8 pb-12 select-none">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-headline-md font-bold tracking-tight text-on-surface">
+            AI Operations Telemetry
+          </h2>
+          <p className="text-xs text-on-surface-variant/60 mt-1.5 leading-none">
+            Monitor pipeline retrieval speeds, similarity distances, cache hit efficiency, and model token costs.
+          </p>
+        </div>
 
-        <Card variant="surface" className="p-4 flex flex-col justify-between">
-          <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">
-            Token Consumption
-          </span>
-          <div className="flex items-baseline gap-1.5 mt-2">
-            <span className="text-xl font-bold text-on-surface">1.2M</span>
-            <span className="text-[9px] text-on-surface-variant/40 font-mono">
-              Steady
-            </span>
-          </div>
-        </Card>
-
-        <Card variant="surface" className="p-4 flex flex-col justify-between">
-          <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">
-            Avg. Latency
-          </span>
-          <div className="flex items-baseline gap-1.5 mt-2">
-            <span className="text-xl font-bold text-on-surface">142ms</span>
-            <span className="text-[9px] text-cyan-400 font-mono font-bold">
-              -12ms
-            </span>
-          </div>
-        </Card>
-
-        <Card variant="surface" className="p-4 flex flex-col justify-between">
-          <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">
-            Search Accuracy
-          </span>
-          <div className="flex items-baseline gap-1.5 mt-2">
-            <span className="text-xl font-bold text-on-surface">98.4%</span>
-            <span className="text-[9px] text-green-400 font-mono font-bold">
-              +0.8%
-            </span>
-          </div>
-        </Card>
-
-        <Card variant="surface" className="p-4 flex flex-col justify-between">
-          <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">
-            Retrieval Success
-          </span>
-          <div className="flex items-baseline gap-1.5 mt-2">
-            <span className="text-xl font-bold text-on-surface">94.2%</span>
-            <span className="text-[9px] text-green-400 font-mono font-bold flex items-center">
-              +1.2% <TrendingUp className="w-2.5 h-2.5 ml-0.5" />
-            </span>
-          </div>
-        </Card>
-
-        <Card variant="surface" className="p-4 flex flex-col justify-between">
-          <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">
-            Avg Similarity
-          </span>
-          <div className="flex items-baseline gap-1.5 mt-2">
-            <span className="text-xl font-bold text-on-surface">0.89</span>
-            <span className="text-[9px] text-[#adc6ff] font-mono font-bold flex items-center">
-              Optimal <CheckCircle className="w-2.5 h-2.5 ml-0.5 text-primary" />
-            </span>
-          </div>
-        </Card>
+        <div className="flex items-center gap-3 shrink-0">
+          <Tabs
+            tabs={[
+              { id: "24h", label: "24 Hours" },
+              { id: "7d", label: "7 Days" },
+              { id: "30d", label: "30 Days" },
+            ]}
+            activeTab={timeframe}
+            onChange={(id) => {
+              setTimeframe(id);
+              addToast(`Timeframe changed to ${id}`, "info");
+            }}
+          />
+          <Button variant="ghost" onClick={handleRefreshAnalytics}>
+            <RefreshCw className="w-3.5 h-3.5" />
+          </Button>
+        </div>
       </div>
 
-      {/* Grid: Charts Section */}
+      {/* Primary Analytics grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Chart 1: Infrastructure Scaling */}
+        {/* Chart 1: Retrieval Latency vs Token Usage */}
         <Card variant="surface" className="p-6">
           <div className="flex items-start justify-between mb-6">
             <div>
-              <h3 className="text-body-base font-bold text-on-surface">
-                Infrastructure Scaling
+              <h3 className="text-body-sm font-bold text-on-surface">
+                Latency vs Token Ingestion
               </h3>
-              <p className="text-xs text-on-surface-variant/60 mt-1">
-                Document corpus growth vs token processing volume
+              <p className="text-[10px] text-on-surface-variant/50 mt-1">
+                Real-time query speed (ms) mapped against prompt tokens.
               </p>
             </div>
-            {/* Day / Week Toggle buttons */}
-            <div className="flex items-center bg-[#171b26] p-0.5 rounded border border-white/5 text-[10px] font-semibold">
-              <button
-                onClick={() => setTimeframe("Day")}
-                className={`px-3 py-1 rounded transition-all cursor-pointer ${
-                  timeframe === "Day"
-                    ? "bg-surface-container text-on-surface border border-white/5"
-                    : "text-on-surface-variant/40 hover:text-on-surface"
-                }`}
-              >
-                Day
-              </button>
-              <button
-                onClick={() => setTimeframe("Week")}
-                className={`px-3 py-1 rounded transition-all cursor-pointer ${
-                  timeframe === "Week"
-                    ? "bg-surface-container text-on-surface border border-white/5"
-                    : "text-on-surface-variant/40 hover:text-on-surface"
-                }`}
-              >
-                Week
-              </button>
+            <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold font-mono">
+              <Clock className="w-4 h-4 text-green-400" />
+              <span>Avg: 142ms</span>
             </div>
           </div>
 
-          <div className="h-64 sm:h-80 w-full">
+          <div className="h-64 sm:h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={infraData}>
+              <ComposedChart data={latencyData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
                 <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
-                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
+                <YAxis yAxisId="left" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
+                <YAxis yAxisId="right" orientation="right" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "var(--color-surface-container)",
@@ -199,56 +151,53 @@ export default function Analytics() {
                     color: "var(--color-on-surface)",
                   }}
                 />
-                <Bar dataKey="docs" radius={[4, 4, 0, 0]}>
-                  {infraData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Bar>
+                <Bar yAxisId="right" dataKey="tokens" fill="rgba(255,255,255,0.08)" radius={[3, 3, 0, 0]} />
                 <Line
+                  yAxisId="left"
                   type="monotone"
-                  dataKey="tokens"
-                  stroke="var(--color-secondary)"
+                  dataKey="latency"
+                  stroke="var(--color-primary)"
                   strokeWidth={2}
-                  dot={{ r: 3, fill: "var(--color-secondary)" }}
+                  dot={{ r: 3, fill: "var(--color-primary)" }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
           <div className="flex justify-center gap-6 mt-4 text-[10px] font-bold font-mono uppercase tracking-wider text-on-surface-variant/50">
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-sm bg-primary block" />
-              <span>Docs Indexed</span>
+              <span className="w-2.5 h-0.5 bg-primary block" />
+              <span>Latency (ms)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-0.5 bg-secondary block" />
+              <span className="w-2.5 h-2.5 bg-white/10 rounded-sm block" />
               <span>Tokens Used</span>
             </div>
           </div>
         </Card>
 
-        {/* Chart 2: Embedding Growth Over Time */}
+        {/* Chart 2: Embedding growth */}
         <Card variant="surface" className="p-6">
           <div className="flex items-start justify-between mb-6">
             <div>
-              <h3 className="text-body-base font-bold text-on-surface">
-                Embedding Growth Over Time
+              <h3 className="text-body-sm font-bold text-on-surface">
+                Vector Embedding growth
               </h3>
-              <p className="text-xs text-on-surface-variant/60 mt-1">
-                Cumulative vector count across all knowledge clusters
+              <p className="text-[10px] text-on-surface-variant/50 mt-1">
+                Cumulative vector node count indexed in ChromaDB (Millions).
               </p>
             </div>
-            <div className="flex items-center gap-1 text-xs text-green-400 font-bold font-mono">
-              <TrendingUp className="w-4 h-4 text-green-400" />
+            <div className="flex items-center gap-1.5 text-xs text-primary font-bold font-mono">
+              <TrendingUp className="w-4 h-4 text-primary" />
               <span>+240k this month</span>
             </div>
           </div>
 
-          <div className="h-64 sm:h-80 w-full">
+          <div className="h-64 sm:h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={embeddingData}>
                 <defs>
-                  <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.2} />
+                  <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.15} />
                     <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
@@ -265,251 +214,135 @@ export default function Analytics() {
                 />
                 <Area
                   type="monotone"
-                  dataKey="value"
+                  dataKey="vectors"
                   stroke="var(--color-primary)"
                   fillOpacity={1}
-                  fill="url(#areaGradient)"
+                  fill="url(#growthGradient)"
                   strokeWidth={2}
                 />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </Card>
-      </div>
 
-      {/* Grid: System Performance and Queried Documents */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* System Performance */}
-        <Card variant="surface" className="p-6 lg:col-span-1 flex flex-col justify-between">
-          <div className="space-y-6">
-            <h3 className="text-body-base font-bold text-on-surface flex items-center justify-between">
-              <span>System Performance</span>
-            </h3>
-
-            {/* Performance Bars */}
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-[11px] font-bold font-mono tracking-wider text-on-surface-variant/60 uppercase">
-                  <span>P99 Latency</span>
-                  <span className="text-on-surface">198ms</span>
-                </div>
-                <div className="w-full h-1.5 bg-white/5 rounded-full mt-1.5 overflow-hidden">
-                  <div className="bg-primary h-full w-[65%] rounded-full" />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[11px] font-bold font-mono tracking-wider text-on-surface-variant/60 uppercase">
-                  <span>P95 Latency</span>
-                  <span className="text-on-surface">112ms</span>
-                </div>
-                <div className="w-full h-1.5 bg-white/5 rounded-full mt-1.5 overflow-hidden">
-                  <div className="bg-on-surface-variant/30 h-full w-[45%] rounded-full" />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between text-[11px] font-bold font-mono tracking-wider text-on-surface-variant/60 uppercase">
-                  <span>API Uptime</span>
-                  <span className="text-green-400">99.998%</span>
-                </div>
-                <div className="w-full h-1.5 bg-white/5 rounded-full mt-1.5 overflow-hidden">
-                  <div className="bg-green-400 h-full w-[99.9%] rounded-full" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Optimization active card */}
-          <div className="mt-8 p-4 rounded-default border border-white/5 bg-[#171b26]/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center border border-primary/20 text-primary shrink-0">
-              <Zap className="w-4 h-4 text-primary" />
-            </div>
+        {/* Chart 3: Similarity score distribution */}
+        <Card variant="surface" className="p-6">
+          <div className="flex items-start justify-between mb-6">
             <div>
-              <span className="text-xs font-bold text-on-surface block">
-                Optimization Active
-              </span>
-              <span className="text-[9px] text-on-surface-variant/40 font-mono block mt-0.5">
-                LAST TUNED 2H AGO
-              </span>
+              <h3 className="text-body-sm font-bold text-on-surface">
+                Cosine Similarity Score Distribution
+              </h3>
+              <p className="text-[10px] text-on-surface-variant/50 mt-1">
+                Volume of query retrieval chunks grouped by accuracy similarity scores.
+              </p>
             </div>
+            <Badge variant="success">98.4% Optimal</Badge>
+          </div>
+
+          <div className="h-64 sm:h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={similarityData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                <XAxis dataKey="range" stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} tickLine={false} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "var(--color-surface-container)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "var(--radius-default)",
+                    color: "var(--color-on-surface)",
+                  }}
+                />
+                <Bar dataKey="count" fill="rgba(255,255,255,0.08)" radius={[3, 3, 0, 0]}>
+                  {similarityData.map((entry, index) => {
+                    const isActive = index === 4; // Highlight highest accuracy
+                    return (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={isActive ? "var(--color-primary)" : "rgba(255,255,255,0.08)"}
+                      />
+                    );
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </Card>
 
-        {/* Top Queried Documents */}
-        <Card variant="surface" className="p-6 lg:col-span-1">
-          <h3 className="text-body-base font-bold text-on-surface mb-4">
-            Top Queried Documents
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-white/5 text-[9px] uppercase font-mono text-on-surface-variant/40 tracking-wider">
-                  <th className="pb-3 font-semibold">Document</th>
-                  <th className="pb-3 font-semibold">Hits</th>
-                  <th className="pb-3 font-semibold text-right">Trend</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {[
-                  { name: "API_Reference_v2.pdf", hits: "12,840", trend: "+12%" },
-                  { name: "Security_Policy.docx", hits: "8,211", trend: "+5%" },
-                  { name: "Onboarding_Guide.md", hits: "5,402", trend: "0%" },
-                ].map((row) => (
-                  <tr key={row.name} className="hover:bg-white/3">
-                    <td className="py-3.5 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-on-surface-variant/40 shrink-0" />
-                      <span className="font-semibold text-on-surface truncate max-w-[120px] sm:max-w-[160px]">
-                        {row.name}
-                      </span>
-                    </td>
-                    <td className="py-3.5 font-mono text-on-surface font-semibold">{row.hits}</td>
-                    <td className="py-3.5 text-right font-mono font-bold text-green-400">
-                      {row.trend}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        {/* Chart 4: Model Usage & Cache Hit Ratio */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
+          {/* Cache Hit Ratio Donut */}
+          <Card variant="surface" className="p-6 flex flex-col justify-between">
+            <div>
+              <h3 className="text-body-sm font-bold text-on-surface">
+                Cache Hit Ratio
+              </h3>
+              <p className="text-[10px] text-on-surface-variant/50 mt-1">
+                Vector retrieval database caching efficiency.
+              </p>
+            </div>
 
-        {/* High-Traffic Documents */}
-        <Card variant="surface" className="p-6 lg:col-span-1">
-          <h3 className="text-body-base font-bold text-on-surface mb-4">
-            High-Traffic Documents
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-white/5 text-[9px] uppercase font-mono text-on-surface-variant/40 tracking-wider">
-                  <th className="pb-3 font-semibold">Resource</th>
-                  <th className="pb-3 font-semibold">Requests</th>
-                  <th className="pb-3 font-semibold text-right">Tokens</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {[
-                  { name: "Q4_Fiscal_Report.pdf", reqs: "2,412", tokens: "450k" },
-                  { name: "Engineering_Onboarding.md", reqs: "1,894", tokens: "820k" },
-                  { name: "Product_Vision_2025.pdf", reqs: "1,502", tokens: "1.20M" },
-                  { name: "Client_Agreement_Templates.docx", reqs: "948", tokens: "310k" },
-                ].map((row) => (
-                  <tr key={row.name} className="hover:bg-white/3">
-                    <td className="py-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-on-surface-variant/40 shrink-0" />
-                      <span className="font-semibold text-on-surface truncate max-w-[110px] sm:max-w-[140px]">
-                        {row.name}
-                      </span>
-                    </td>
-                    <td className="py-3 font-mono text-on-surface font-semibold">{row.reqs}</td>
-                    <td className="py-3 text-right font-mono text-on-surface-variant/70">
-                      {row.tokens}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-
-      {/* Vector Embedding Clusters Gauge and Conversation Volume */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* Gauge Card */}
-        <Card variant="surface" className="p-6 flex items-center justify-between lg:col-span-1">
-          <div className="space-y-1">
-            <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">
-              Vector Embedding Clusters
-            </span>
-            <h3 className="text-3xl font-bold tracking-tight text-on-surface mt-2">
-              4.8M
-            </h3>
-            <p className="text-xs text-on-surface-variant/60">
-              High-density knowledge nodes
-            </p>
-          </div>
-
-          {/* Circular Gauge Ring Mock */}
-          <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
-            {/* SVG Ring */}
-            <svg className="w-full h-full transform -rotate-90">
-              <circle
-                cx="48"
-                cy="48"
-                r="36"
-                className="stroke-white/5 fill-transparent"
-                strokeWidth="6"
-              />
-              <circle
-                cx="48"
-                cy="48"
-                r="36"
-                className="stroke-primary fill-transparent"
-                strokeWidth="6"
-                strokeDasharray="226"
-                strokeDashoffset="60" // 75% fill
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center border border-white/10">
-                <Network className="w-4 h-4 text-on-surface-variant" />
+            <div className="h-32 w-full relative flex items-center justify-center my-3">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={cacheData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={36}
+                    outerRadius={48}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {cacheData.map((entry, idx) => (
+                      <Cell key={`cell-${idx}`} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
+                <span className="text-xl font-bold text-on-surface">65%</span>
+                <span className="text-[8px] text-primary font-bold font-mono tracking-wider">Hit Ratio</span>
               </div>
             </div>
-          </div>
-        </Card>
 
-        {/* Conversation Volume Card */}
-        <Card variant="surface" className="p-6 lg:col-span-2 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div className="space-y-0.5">
-              <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">
-                Conversation Volume
-              </span>
-              <div className="flex items-baseline gap-2 mt-1">
-                <h3 className="text-2xl font-bold text-on-surface">82,410</h3>
-                <span className="text-[10px] text-on-surface-variant/40 uppercase tracking-wide">
-                  Queries Total
-                </span>
-              </div>
+            <div className="text-[9px] font-mono text-on-surface-variant/40 flex justify-between pt-2 border-t border-white/5">
+              <span>Hits: <strong>65%</strong></span>
+              <span>Misses: <strong>35%</strong></span>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-green-400 font-bold font-mono">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <span>18%</span>
+          </Card>
+
+          {/* Model Usage chart */}
+          <Card variant="surface" className="p-6 flex flex-col justify-between">
+            <div>
+              <h3 className="text-body-sm font-bold text-on-surface">
+                Model Inference Usage
+              </h3>
+              <p className="text-[10px] text-on-surface-variant/50 mt-1">
+                Volume of query inferences processed per model.
+              </p>
             </div>
-          </div>
 
-          <div className="flex items-end justify-between gap-2 h-16 w-full px-2">
-            {volumeData.map((item, index) => (
-              <div
-                key={index}
-                className="w-full rounded-sm"
-                style={{ height: `${item.value}%`, backgroundColor: item.fill }}
-              />
-            ))}
-          </div>
+            <div className="h-32 w-full my-3">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={modelUsageData} layout="vertical">
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" stroke="rgba(255,255,255,0.3)" fontSize={8} width={50} tickLine={false} />
+                  <Bar dataKey="queries" radius={[0, 3, 3, 0]}>
+                    {modelUsageData.map((entry, idx) => (
+                      <Cell key={`cell-${idx}`} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
-          <div className="flex items-center justify-end mt-4 pt-2 border-t border-white/5">
-            <button className="text-xs text-primary hover:text-[#9cbbf5] transition-colors flex items-center gap-1 bg-transparent border-none cursor-pointer font-semibold">
-              <Download className="w-3.5 h-3.5" /> Export Log
-            </button>
-          </div>
-        </Card>
+            <div className="text-[9px] font-mono text-on-surface-variant/40 flex justify-between pt-2 border-t border-white/5">
+              <span>Total: <strong>23.5k Inferences</strong></span>
+            </div>
+          </Card>
+        </div>
       </div>
-
-      {/* Footer Branding Status */}
-      <footer className="pt-6 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-[10px] font-bold font-mono text-on-surface-variant/45">
-        <div className="flex items-center gap-2">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-400 block shrink-0" />
-          <span>SYSTEM OPERATIONAL</span>
-          <span className="text-white/10">|</span>
-          <span>NEXUSAI V2.4.0-STABLE</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="hover:text-on-surface cursor-pointer">DOCUMENTATION</span>
-          <span className="hover:text-on-surface cursor-pointer">SUPPORT</span>
-        </div>
-      </footer>
     </div>
   );
 }

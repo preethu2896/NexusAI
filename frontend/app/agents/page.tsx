@@ -5,472 +5,387 @@ import {
   Bot,
   Terminal,
   Settings,
-  Check,
-  Copy,
   GitFork,
   Database,
-  Search,
-  CheckCircle,
-  FileSearch,
+  Cpu,
+  Zap,
   Globe,
   Sliders,
   RefreshCw,
-  FolderOpen,
-  Filter,
-  Zap,
-  Microscope,
+  Plus,
+  ArrowRight,
+  TrendingUp,
+  Activity,
+  CheckCircle,
+  FileText,
+  Lock,
   Code,
   X,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
+import { Dialog } from "../../components/ui/Dialog";
+import { Tabs } from "../../components/ui/Tabs";
+import { useToastStore } from "../../store/toastStore";
 
 export default function Agents() {
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [isSDKOpen, setIsSDKOpen] = useState(false);
+  const { addToast } = useToastStore();
 
-  const sdkCode = `from nexusai import AgentOrchestrator
+  // Selected agent for Dialog details
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("overview");
 
-orchestrator = AgentOrchestrator(
-    model="gpt-4o-mini",
-    temperature=0.0
-)
+  // Mock agents data with deep capabilities, tool limits, prompts
+  const [agents, setAgents] = useState([
+    {
+      id: "planner",
+      name: "Planner Agent",
+      purpose: "Strategic task decomposition",
+      desc: "Breaks down complex user queries into logical multi-step executable workflows.",
+      status: "Running",
+      version: "v1.4.2",
+      latency: "120ms",
+      memory: "42MB",
+      lastExec: "2m ago",
+      tools: ["Task decomposer", "Schema parser"],
+      prompt: "Decompose user query Q into a sequence of dependency tasks [T1, T2, ... Tn] based on reference context...",
+      temp: 0.2,
+      maxTokens: 2048,
+    },
+    {
+      id: "retriever",
+      name: "Retriever Agent",
+      purpose: "High-precision semantic search",
+      desc: "Optimized for locating and rank-extracting granular context chunks within vector indexes.",
+      status: "Ready",
+      version: "v2.1.0",
+      latency: "85ms",
+      memory: "128MB",
+      lastExec: "14s ago",
+      tools: ["Cosine similarity calculator", "ChromaDB vector query"],
+      prompt: "Extract top K documents relevant to the vector weights matching query embeddings...",
+      temp: 0.1,
+      maxTokens: 1024,
+    },
+    {
+      id: "research",
+      name: "Research Agent",
+      purpose: "Deep-dive document synthesis",
+      desc: "Cross-references multiple collections to compile technical whitepapers and audits.",
+      status: "Idle",
+      version: "v0.9.8",
+      latency: "1.2s",
+      memory: "512MB",
+      lastExec: "1h ago",
+      tools: ["Citation generator", "HTML link parser"],
+      prompt: "Synthesize source files context to write an analytical summary with page citation notes...",
+      temp: 0.4,
+      maxTokens: 4096,
+    },
+    {
+      id: "sql",
+      name: "SQL Agent",
+      purpose: "Structured relational queries",
+      desc: "Translates natural language inputs into high-performance raw SQL statements.",
+      status: "Running",
+      version: "v1.2.0",
+      latency: "45ms",
+      memory: "32MB",
+      lastExec: "5m ago",
+      tools: ["PostgreSQL schema analyzer", "Query formatter"],
+      prompt: "Convert prompt P into valid PostgreSQL query syntax using connection schema details...",
+      temp: 0.0,
+      maxTokens: 512,
+    },
+    {
+      id: "web",
+      name: "Web Search Agent",
+      purpose: "Real-time external knowledge retrieval",
+      desc: "Indexes the live web to supply immediate context missing from historical training corpuses.",
+      status: "Offline",
+      version: "v1.0.5",
+      latency: "2.4s",
+      memory: "64MB",
+      lastExec: "12m ago",
+      tools: ["Brave search API engine", "Site scraper"],
+      prompt: "Query live web index for recent topics and filter outputs based on source credibility...",
+      temp: 0.3,
+      maxTokens: 1024,
+    },
+    {
+      id: "memory",
+      name: "Memory Agent",
+      purpose: "Long-term conversation storage",
+      desc: "Manages session conversation cache, extracts key entities, and updates user workspace preferences.",
+      status: "Ready",
+      version: "v2.0.1",
+      latency: "15ms",
+      memory: "256MB",
+      lastExec: "Now",
+      tools: ["Entity extractor", "Redis key-value mapper"],
+      prompt: "Update user context graph with extracted session facts and user workspace preferences...",
+      temp: 0.2,
+      maxTokens: 512,
+    },
+    {
+      id: "reflection",
+      name: "Reflection Agent",
+      purpose: "Verification and audit alignment",
+      desc: "Reviews generated outputs for formatting compliance, fact checks citations, and guards brand alignment.",
+      status: "Running",
+      version: "v2.1.0",
+      latency: "85ms",
+      memory: "128MB",
+      lastExec: "14s ago",
+      tools: ["Factuality checker", "Brand policy filter"],
+      prompt: "Evaluate response R against source documents D for factual grounding errors or hallucination issues...",
+      temp: 0.0,
+      maxTokens: 2048,
+    },
+  ]);
 
-# Invoke the structured planning agent pipeline
-response = orchestrator.run(
-    query="How does database connection pooling affect PostgreSQL throughput?",
-    document_id="ac6e267a-b579-49a7-a3a6-30283dcb4fb7"
-)
+  const activeAgent = agents.find((a) => a.id === selectedAgentId);
 
-print(response.answer)
-`;
+  const handleUpdateAgentConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeAgent) return;
+    addToast(`Configuration for ${activeAgent.name} saved successfully`, "success");
+    setSelectedAgentId(null);
+  };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(sdkCode);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+  const handleDeployNewAgent = () => {
+    addToast("Initializing Agent build deployment pipeline (mock)", "info");
   };
 
   return (
-    <div className="space-y-8 pb-12 relative">
-      {/* Title Header area */}
+    <div className="space-y-8 pb-12 select-none">
+      {/* Title block */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-headline-md font-bold tracking-tight text-on-surface">
-            Agentic Intelligence
+            Agent Marketplace
           </h2>
-          <p className="text-xs text-on-surface-variant/70 mt-2 max-w-3xl leading-relaxed">
-            Deploy specialized RAG-enabled agents designed for complex orchestration. NexusAI agents operate autonomously within your knowledge boundaries to decompose strategies, synthesize data, and verify outputs.
+          <p className="text-xs text-on-surface-variant/60 mt-1.5 leading-none">
+            Orchestrate specialized AI execution units with custom prompt scripts and system access keys.
           </p>
         </div>
 
-        {/* Buttons on Right */}
         <div className="flex items-center gap-3 shrink-0">
-          <Button variant="ghost">
-            <Filter className="w-3.5 h-3.5" /> Filter
-          </Button>
-          <Button variant="primary" className="bg-[#adc6ff] hover:bg-[#9cbbf5] text-[#002e6a]">
-            <Zap className="w-3.5 h-3.5" /> Quick Deploy
+          <Button variant="primary" onClick={handleDeployNewAgent} className="bg-[#adc6ff] hover:bg-[#9cbbf5] text-[#002e6a]">
+            <Plus className="w-4 h-4 mr-1.5" /> Deploy Agent
           </Button>
         </div>
       </div>
 
       {/* Grid of Agent Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-        {/* Planner Agent */}
-        <Card variant="surface" className="p-6 flex flex-col justify-between h-[280px]">
-          <div>
-            <div className="flex items-start justify-between">
-              <div className="w-9 h-9 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                <GitFork className="w-5 h-5 text-primary" />
-              </div>
-              <Badge variant="secondary" className="text-[9px] py-0 px-2 uppercase tracking-wide">
-                Running
-              </Badge>
-            </div>
-            <h4 className="text-body-sm font-bold text-on-surface mt-4">
-              Planner Agent
-            </h4>
-            <p className="text-xs text-on-surface-variant/65 mt-2 line-clamp-3 leading-relaxed">
-              Strategic task decomposition. Breaks down complex user requests into executable multi-step workflows.
-            </p>
-          </div>
+        {agents.map((agent) => {
+          const statusBadges = {
+            Running: "success",
+            Ready: "primary",
+            Idle: "secondary",
+            Offline: "error",
+          } as const;
 
-          <div>
-            <div className="grid grid-cols-2 gap-y-2 text-[10px] font-mono text-on-surface-variant/50 border-t border-white/5 pt-3">
+          return (
+            <Card
+              key={agent.id}
+              variant="surface"
+              className="p-6 flex flex-col justify-between h-[280px] border border-white/5 hover:border-primary/20 transition-all duration-150 group"
+            >
               <div>
-                LATENCY: <strong className="text-on-surface">120ms</strong>
-              </div>
-              <div>
-                MEMORY: <strong className="text-on-surface">42MB</strong>
-              </div>
-              <div>
-                VERSION: <strong className="text-on-surface">v1.4.2</strong>
-              </div>
-              <div>
-                LAST EXEC: <strong className="text-on-surface">2m ago</strong>
-              </div>
-            </div>
-            <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5 text-[10px] font-semibold text-on-surface-variant">
-              <div className="flex items-center gap-1.5">
-                <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 font-bold">L3</span>
-                <span className="hover:text-on-surface cursor-pointer">✏️</span>
-              </div>
-              <button className="text-primary hover:underline cursor-pointer font-bold bg-transparent border-none">
-                Configure
-              </button>
-            </div>
-          </div>
-        </Card>
-
-        {/* Retriever Agent */}
-        <Card variant="surface" className="p-6 flex flex-col justify-between h-[280px]">
-          <div>
-            <div className="flex items-start justify-between">
-              <div className="w-9 h-9 rounded-md bg-[#d0bcff]/10 border border-[#d0bcff]/20 flex items-center justify-center text-[#d0bcff] shrink-0">
-                <FileSearch className="w-5 h-5" />
-              </div>
-              <Badge variant="default" className="text-[9px] py-0 px-2 uppercase tracking-wide">
-                Ready
-              </Badge>
-            </div>
-            <h4 className="text-body-sm font-bold text-on-surface mt-4">
-              Retriever Agent
-            </h4>
-            <p className="text-xs text-on-surface-variant/65 mt-2 line-clamp-3 leading-relaxed">
-              High-precision semantic search. Optimized for finding granular data within vector stores and dense RAG indexes.
-            </p>
-          </div>
-
-          <div>
-            <div className="grid grid-cols-2 gap-y-2 text-[10px] font-mono text-on-surface-variant/50 border-t border-white/5 pt-3">
-              <div>
-                LATENCY: <strong className="text-on-surface">85ms</strong>
-              </div>
-              <div>
-                MEMORY: <strong className="text-on-surface">128MB</strong>
-              </div>
-              <div>
-                VERSION: <strong className="text-on-surface">v2.1.0</strong>
-              </div>
-              <div>
-                LAST EXEC: <strong className="text-on-surface">14s ago</strong>
-              </div>
-            </div>
-            <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5 text-[10px] font-semibold text-on-surface-variant">
-              <span>ID: RT-9021</span>
-              <button className="text-primary hover:underline cursor-pointer font-bold bg-transparent border-none">
-                Configure
-              </button>
-            </div>
-          </div>
-        </Card>
-
-        {/* Research Agent */}
-        <Card variant="surface" className="p-6 flex flex-col justify-between h-[280px]">
-          <div>
-            <div className="flex items-start justify-between">
-              <div className="w-9 h-9 rounded-md bg-white/5 border border-white/10 flex items-center justify-center text-on-surface-variant shrink-0">
-                <Microscope className="w-5 h-5" />
-              </div>
-              <Badge variant="default" className="text-[9px] py-0 px-2 uppercase tracking-wide bg-white/5 text-on-surface-variant/75">
-                Idle
-              </Badge>
-            </div>
-            <h4 className="text-body-sm font-bold text-on-surface mt-4">
-              Research Agent
-            </h4>
-            <p className="text-xs text-on-surface-variant/65 mt-2 line-clamp-2 leading-relaxed">
-              Deep-dive synthesis and reporting. Cross-references multiple sources to create comprehensive whitepapers.
-            </p>
-
-            {/* Special Inner Container: LAST RUN OUTCOME */}
-            <div className="mt-3 p-2.5 rounded border border-white/5 bg-[#171b26] flex items-center gap-2 text-[10px]">
-              <CheckCircle className="w-3.5 h-3.5 text-green-400 shrink-0" />
-              <span className="font-mono italic text-on-surface-variant/80 truncate">
-                "Annual Market Analysis complete..."
-              </span>
-            </div>
-          </div>
-
-          <div>
-            <div className="grid grid-cols-2 gap-y-2 text-[10px] font-mono text-on-surface-variant/50 border-t border-white/5 pt-3">
-              <div>
-                LATENCY: <strong className="text-on-surface">1.2s</strong>
-              </div>
-              <div>
-                MEMORY: <strong className="text-on-surface">512MB</strong>
-              </div>
-              <div>
-                VERSION: <strong className="text-on-surface">v0.9.8</strong>
-              </div>
-              <div>
-                LAST EXEC: <strong className="text-on-surface">1h ago</strong>
-              </div>
-            </div>
-            <div className="flex justify-end items-center mt-3 pt-2 border-t border-white/5 text-[10px] font-semibold">
-              <button className="text-primary hover:underline cursor-pointer font-bold bg-transparent border-none">
-                Configure
-              </button>
-            </div>
-          </div>
-        </Card>
-
-        {/* SQL Agent */}
-        <Card variant="surface" className="p-6 flex flex-col justify-between h-[280px]">
-          <div>
-            <div className="flex items-start justify-between">
-              <div className="w-9 h-9 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                <Database className="w-5 h-5 text-primary" />
-              </div>
-              <Badge variant="secondary" className="text-[9px] py-0 px-2 uppercase tracking-wide">
-                Running
-              </Badge>
-            </div>
-            <h4 className="text-body-sm font-bold text-on-surface mt-4">
-              SQL Agent
-            </h4>
-            <p className="text-xs text-on-surface-variant/65 mt-2 line-clamp-3 leading-relaxed">
-              Structured data querying. Translates natural language into high-performance SQL for direct database interaction.
-            </p>
-          </div>
-
-          <div>
-            <div className="grid grid-cols-2 gap-y-2 text-[10px] font-mono text-on-surface-variant/50 border-t border-white/5 pt-3">
-              <div>
-                LATENCY: <strong className="text-on-surface">45ms</strong>
-              </div>
-              <div>
-                MEMORY: <strong className="text-on-surface">32MB</strong>
-              </div>
-              <div>
-                VERSION: <strong className="text-on-surface">v1.2.0</strong>
-              </div>
-              <div>
-                LAST EXEC: <strong className="text-on-surface">5m ago</strong>
-              </div>
-            </div>
-            <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5 text-[10px] font-semibold text-on-surface-variant">
-              <span>DB Connect: Main_Prod</span>
-              <button className="text-primary hover:underline cursor-pointer font-bold bg-transparent border-none">
-                Configure
-              </button>
-            </div>
-          </div>
-        </Card>
-
-        {/* Web Search Agent */}
-        <Card variant="surface" className="p-6 flex flex-col justify-between h-[280px]">
-          <div>
-            <div className="flex items-start justify-between">
-              <div className="w-9 h-9 rounded-md bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
-                <Globe className="w-5 h-5" />
-              </div>
-              <Badge variant="error" className="text-[9px] py-0 px-2 uppercase tracking-wide">
-                Offline
-              </Badge>
-            </div>
-            <h4 className="text-body-sm font-bold text-on-surface mt-4">
-              Web Search Agent
-            </h4>
-            <p className="text-xs text-on-surface-variant/65 mt-2 line-clamp-3 leading-relaxed">
-              Real-time external knowledge. Scours the live web to find the most current information beyond static training data.
-            </p>
-          </div>
-
-          <div>
-            <div className="grid grid-cols-2 gap-y-2 text-[10px] font-mono text-on-surface-variant/50 border-t border-white/5 pt-3">
-              <div>
-                LATENCY: <strong className="text-on-surface">2.4s</strong>
-              </div>
-              <div>
-                MEMORY: <strong className="text-on-surface">64MB</strong>
-              </div>
-              <div>
-                VERSION: <strong className="text-on-surface">v1.0.5</strong>
-              </div>
-              <div>
-                LAST EXEC: <strong className="text-on-surface">12m ago</strong>
-              </div>
-            </div>
-            <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5 text-[10px] font-semibold text-on-surface-variant">
-              <div className="flex items-center gap-1">
-                <span className="w-4 h-4 rounded bg-white/5 block" />
-                <span className="w-4 h-4 rounded bg-white/5 block" />
-              </div>
-              <button className="text-primary hover:underline cursor-pointer font-bold bg-transparent border-none">
-                Configure
-              </button>
-            </div>
-          </div>
-        </Card>
-
-        {/* Memory Agent */}
-        <Card variant="surface" className="p-6 flex flex-col justify-between h-[280px]">
-          <div>
-            <div className="flex items-start justify-between">
-              <div className="w-9 h-9 rounded-md bg-[#d0bcff]/10 border border-[#d0bcff]/20 flex items-center justify-center text-[#d0bcff] shrink-0">
-                <Sliders className="w-5 h-5" />
-              </div>
-              <Badge variant="default" className="text-[9px] py-0 px-2 uppercase tracking-wide">
-                Ready
-              </Badge>
-            </div>
-            <h4 className="text-body-sm font-bold text-on-surface mt-4">
-              Memory Agent
-            </h4>
-            <p className="text-xs text-on-surface-variant/65 mt-2 line-clamp-3 leading-relaxed">
-              Long-term conversation context. Manages entity extraction and user preference persistence across sessions.
-            </p>
-          </div>
-
-          <div>
-            <div className="grid grid-cols-2 gap-y-2 text-[10px] font-mono text-on-surface-variant/50 border-t border-white/5 pt-3">
-              <div>
-                LATENCY: <strong className="text-on-surface">15ms</strong>
-              </div>
-              <div>
-                MEMORY: <strong className="text-on-surface">256MB</strong>
-              </div>
-              <div>
-                VERSION: <strong className="text-on-surface">v2.0.1</strong>
-              </div>
-              <div>
-                LAST EXEC: <strong className="text-on-surface">Now</strong>
-              </div>
-            </div>
-            <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5 text-[10px] font-semibold text-on-surface-variant">
-              <span>2.4k entities tracked</span>
-              <button className="text-primary hover:underline cursor-pointer font-bold bg-transparent border-none">
-                Configure
-              </button>
-            </div>
-          </div>
-        </Card>
-
-        {/* Reflection Agent (spans 2 columns on large screens) */}
-        <Card variant="surface" className="p-6 flex flex-col justify-between h-[280px] lg:col-span-2">
-          <div>
-            <div className="flex items-start justify-between">
-              <div className="w-9 h-9 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                <RefreshCw className="w-5 h-5 text-primary" />
-              </div>
-              <Badge variant="secondary" className="text-[9px] py-0 px-2 uppercase tracking-wide">
-                Running
-              </Badge>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-              <div>
-                <h4 className="text-body-sm font-bold text-on-surface">
-                  Reflection Agent
+                <div className="flex items-start justify-between">
+                  <div className="w-9 h-9 rounded bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                    <Bot className="w-5 h-5 text-primary" />
+                  </div>
+                  <Badge variant={statusBadges[agent.status as keyof typeof statusBadges] || "secondary"}>
+                    {agent.status}
+                  </Badge>
+                </div>
+                <h4 className="text-body-sm font-bold text-on-surface mt-4 tracking-wide">
+                  {agent.name}
                 </h4>
-                <p className="text-xs text-on-surface-variant/65 mt-2 leading-relaxed">
-                  Output verification and self-correction. Critiques other agents' responses to ensure accuracy, safety, and brand alignment before delivery.
+                <p className="text-xs text-on-surface-variant/65 mt-2 line-clamp-3 leading-relaxed">
+                  {agent.desc}
                 </p>
               </div>
 
-              {/* Middle/Right Accuracy Gauge block */}
-              <div className="flex flex-col justify-center border-l border-white/5 md:pl-6">
-                <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase">
-                  Verification Accuracy
-                </span>
-                <span className="text-2xl font-bold text-on-surface mt-1">
-                  99.8%
-                </span>
-                <div className="w-full h-1.5 bg-white/5 rounded-full mt-2 overflow-hidden">
-                  <div className="bg-primary h-full w-[99.8%] rounded-full" />
+              <div>
+                <div className="grid grid-cols-2 gap-y-2.5 text-[10px] font-mono text-on-surface-variant/40 pt-4 border-t border-white/5">
+                  <div>
+                    SPEED: <strong className="text-on-surface">{agent.latency}</strong>
+                  </div>
+                  <div>
+                    MEM: <strong className="text-on-surface">{agent.memory}</strong>
+                  </div>
+                  <div>
+                    VERSION: <strong className="text-on-surface">{agent.version}</strong>
+                  </div>
+                  <div>
+                    LAST RUN: <strong className="text-on-surface">{agent.lastExec}</strong>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-[9px] font-mono text-on-surface-variant/50">
-                  <div>LATENCY: 85ms</div>
-                  <div>MEMORY: 128MB</div>
-                  <div>VERSION: v2.1.0</div>
-                  <div>LAST EXEC: 14s ago</div>
+
+                <div className="flex justify-end pt-3.5 border-t border-white/5 mt-3 select-none">
+                  <button
+                    onClick={() => {
+                      setSelectedAgentId(agent.id);
+                      setActiveTab("overview");
+                    }}
+                    className="text-xs font-bold text-primary hover:text-[#9cbbf5] hover:underline cursor-pointer bg-transparent border-none focus:outline-none"
+                  >
+                    Configure Agent
+                  </button>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end items-center pt-3 border-t border-white/5">
-            <button className="py-1.5 px-4 rounded bg-[#171b26] hover:bg-[#1c1f2a] border border-white/5 text-[10px] font-bold text-on-surface transition-all cursor-pointer">
-              Run Integrity Audit
-            </button>
-          </div>
-        </Card>
-
-        {/* View Logs Card (Spans remaining column in Reflection row) */}
-        <Card variant="surface" className="p-6 flex flex-col items-center justify-center text-center h-[280px]">
-          <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-on-surface-variant/50 mb-4">
-            <Terminal className="w-5 h-5" />
-          </div>
-          <h4 className="text-body-sm font-bold text-on-surface">System Logs</h4>
-          <p className="text-xs text-on-surface-variant/40 mt-1 max-w-[180px]">
-            Audit raw orchestration agent execution steps.
-          </p>
-          <button className="mt-5 w-full py-2 bg-[#171b26] hover:bg-[#1c1f2a] border border-white/5 text-xs font-semibold text-on-surface rounded-default transition-all cursor-pointer">
-            View Logs
-          </button>
-        </Card>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Custom Agent Development Banner */}
-      <Card variant="surface" className="p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-gradient-to-r from-surface-container-low via-surface-container to-surface-container-high relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-        
-        <div className="space-y-2 relative z-10 max-w-xl">
-          <h3 className="text-headline-md font-bold text-on-surface tracking-tight">
-            Custom Agent Development
-          </h3>
-          <p className="text-xs text-on-surface-variant/75 leading-relaxed">
-            Need something more specific? Use our SDK to build and register your own custom agents with proprietary tools and logic.
-          </p>
-        </div>
+      {/* Agent details Modal console */}
+      <Dialog
+        isOpen={!!selectedAgentId}
+        onClose={() => setSelectedAgentId(null)}
+        title={activeAgent ? `${activeAgent.name} Console` : "Agent Configuration"}
+      >
+        {activeAgent && (
+          <div className="space-y-6 select-none">
+            {/* Tabs Selector */}
+            <Tabs
+              tabs={[
+                { id: "overview", label: "Overview" },
+                { id: "config", label: "Configuration" },
+                { id: "prompt", label: "System Prompt" },
+                { id: "logs", label: "Runtime Logs" },
+              ]}
+              activeTab={activeTab}
+              onChange={(id) => setActiveTab(id)}
+            />
 
-        <div className="relative z-10 shrink-0">
-          <button
-            onClick={() => setIsSDKOpen(true)}
-            className="px-5 py-2.5 bg-white text-black hover:bg-neutral-200 font-bold text-xs rounded-default transition-all shadow-md active:scale-[0.98] cursor-pointer"
-          >
-            View SDK Documentation
-          </button>
-        </div>
-      </Card>
+            {/* Content Tabs switcher */}
+            {activeTab === "overview" && (
+              <div className="space-y-4">
+                <div>
+                  <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block mb-1">
+                    Description
+                  </span>
+                  <p className="text-xs text-on-surface-variant leading-relaxed">
+                    {activeAgent.desc}
+                  </p>
+                </div>
 
-      {/* Programmatic execution details shown in a modal if clicked */}
-      {isSDKOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-2xl bg-surface-container border-white/10 p-6 relative">
-            <button
-              onClick={() => setIsSDKOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded text-on-surface-variant/60 hover:text-on-surface hover:bg-white/5 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
+                <div>
+                  <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block mb-2">
+                    Capabilities & Tools Access
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {activeAgent.tools.map((t, i) => (
+                      <Badge key={i} variant="secondary" className="font-mono text-[9px] py-0.5 px-2">
+                        {t}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-primary" />
-                <h3 className="text-label-caps text-on-surface tracking-wider">
-                  Programmatic Execution (Python SDK)
-                </h3>
+                <div className="p-3 bg-surface-container-low border border-white/5 rounded-default grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <span className="text-[10px] text-on-surface-variant/40 block">Latencies Uptime</span>
+                    <strong className="text-xs text-on-surface block mt-1">{activeAgent.latency}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-on-surface-variant/40 block">Allocated RAM</span>
+                    <strong className="text-xs text-on-surface block mt-1">{activeAgent.memory}</strong>
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={handleCopyCode}
-                className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-on-surface bg-white/5 px-2.5 py-1 rounded border border-white/5 transition-all cursor-pointer font-semibold focus:outline-none"
-              >
-                {copiedCode ? "Copied!" : "Copy Snippet"}
-              </button>
-            </div>
+            )}
 
-            <div className="relative rounded-default overflow-hidden bg-surface-container-lowest border border-white/5">
-              <pre className="p-4 overflow-x-auto leading-relaxed custom-scrollbar">
-                <code className="text-mono-code text-green-400 block">{sdkCode}</code>
-              </pre>
-            </div>
-          </Card>
-        </div>
-      )}
+            {activeTab === "config" && (
+              <form onSubmit={handleUpdateAgentConfig} className="space-y-4">
+                {/* Temperature slider */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold font-mono text-on-surface-variant/60">
+                    <span>Inference Temperature</span>
+                    <span className="text-primary">{activeAgent.temp}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    defaultValue={activeAgent.temp}
+                    className="w-full h-1 bg-white/5 rounded outline-none appearance-none accent-primary cursor-pointer"
+                  />
+                  <p className="text-[9px] text-on-surface-variant/30">
+                    Lower levels favor determinism and precision. High levels increase creativity.
+                  </p>
+                </div>
+
+                {/* Max tokens input */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold font-mono text-on-surface-variant/60">
+                    <span>Max Tokens Limit</span>
+                    <span className="text-primary">{activeAgent.maxTokens}</span>
+                  </div>
+                  <input
+                    type="number"
+                    defaultValue={activeAgent.maxTokens}
+                    className="w-full p-2 rounded bg-surface-container-low border border-white/5 text-xs text-on-surface focus:border-primary/20 outline-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-3 border-t border-white/5 mt-4">
+                  <Button type="button" variant="ghost" onClick={() => setSelectedAgentId(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="primary">
+                    Save Config
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {activeTab === "prompt" && (
+              <div className="space-y-4">
+                <div>
+                  <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block mb-2">
+                    Orchestrator System Instructions
+                  </span>
+                  <div className="p-3.5 bg-[#0a0e18] border border-white/5 rounded-default font-mono text-[11px] text-green-400 leading-relaxed overflow-x-auto select-all max-h-56">
+                    {activeAgent.prompt}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "logs" && (
+              <div className="space-y-4">
+                <span className="text-[9px] font-bold font-mono tracking-widest text-on-surface-variant/40 uppercase block">
+                  Runtime Stack Trace
+                </span>
+                <div className="p-3.5 bg-[#0a0e18] border border-white/5 rounded-default font-mono text-[10px] text-on-surface-variant/60 leading-relaxed space-y-2 max-h-56 overflow-y-auto custom-scrollbar">
+                  <div>
+                    <span className="text-on-surface-variant/30">[14:10:02]</span> Initializing agent graph dependencies.
+                  </div>
+                  <div>
+                    <span className="text-on-surface-variant/30">[14:10:02]</span> Loaded system prompt structure.
+                  </div>
+                  <div>
+                    <span className="text-on-surface-variant/30">[14:10:03]</span> Connecting database endpoints... Done.
+                  </div>
+                  <div className="text-green-400/90 font-bold">
+                    <span className="text-on-surface-variant/30">[14:10:04]</span> Inference process returned successfully with code 0.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }
