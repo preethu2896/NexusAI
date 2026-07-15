@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { useUIStore } from "../../store/uiStore";
@@ -9,6 +10,9 @@ import { ToastContainer } from "../ui/Toast";
 export const LayoutContent: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const pathname = usePathname();
+  const isChatPage = pathname === "/chat";
+
   const {
     isSidebarCollapsed,
     isMobileDrawerOpen,
@@ -46,6 +50,15 @@ export const LayoutContent: React.FC<{ children: React.ReactNode }> = ({
           <div className="h-16 bg-surface-container border-b border-white/5" />
           <main className="flex-grow bg-surface p-8 overflow-y-auto" />
         </div>
+      </div>
+    );
+  }
+
+  if (isChatPage) {
+    return (
+      <div className="h-full w-full bg-surface text-on-surface overflow-hidden relative">
+        {children}
+        <ToastContainer />
       </div>
     );
   }
