@@ -230,7 +230,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         
         {/* Brand Header */}
         <div className="flex items-center gap-2.5 select-none">
-          <img src="/logo.png" alt="NexusAI Logo" className="h-32 w-auto object-contain" />
+          <img src="/logo.png" alt="NexusAI Logo" className="h-14 w-auto object-contain" />
         </div>
 
         {/* Center Form Section */}
