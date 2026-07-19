@@ -230,10 +230,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         
         {/* Brand Header */}
         <div className="flex items-center gap-2.5 select-none">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-md shadow-blue-200">
-            <Sparkles className="w-4.5 h-4.5 text-white" />
-          </div>
-          <span className="font-sans font-black text-xl text-slate-800 tracking-tight">NexusAI</span>
+          <img src="/logo.png" alt="NexusAI Logo" className="h-10 w-auto object-contain" />
         </div>
 
         {/* Center Form Section */}
@@ -524,14 +521,7 @@ export default function Auth({ onLoginSuccess }: AuthProps) {
         <div className="absolute top-0 right-0 w-[40rem] h-[40rem] rounded-full bg-blue-400/10 blur-[120px] pointer-events-none -mr-40 -mt-40" />
         <div className="absolute bottom-0 left-0 w-[30rem] h-[30rem] rounded-full bg-indigo-500/10 blur-[100px] pointer-events-none -ml-20 -mb-20" />
 
-        {/* Top Header */}
-        <div className="flex items-center gap-2.5 z-10">
-          <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center backdrop-blur-md border border-white/20">
-            <Sparkles className="w-4.5 h-4.5 text-white animate-pulse" />
-          </div>
-          <span className="font-sans font-black text-lg tracking-tight">NexusAI</span>
-          <span className="px-2 py-0.5 rounded-full bg-white/10 text-[9px] font-mono font-bold tracking-wider uppercase">Enterprise</span>
-        </div>
+        {/* Top Header Removed */}
 
         {/* Strategic Headline & 3D CSS Tablet Showcase */}
         <div className="my-auto max-w-xl space-y-6 z-10">
