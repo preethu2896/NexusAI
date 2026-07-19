@@ -52,7 +52,7 @@ export default function Sidebar({ activeTab, setActiveTab, onSearchClick, curren
         <img 
           src="/logo.png" 
           alt="NexusAI Enterprise" 
-          className="h-11 w-auto object-contain" 
+          className="h-16 w-auto object-contain" 
         />
       </div>
 
