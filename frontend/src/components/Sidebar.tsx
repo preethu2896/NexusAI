@@ -48,11 +48,11 @@ export default function Sidebar({ activeTab, setActiveTab, onSearchClick, curren
   return (
     <aside id="main-sidebar" className="w-64 bg-white border-r border-slate-100 flex flex-col h-screen sticky top-0 shrink-0 z-20">
       {/* Brand Header */}
-      <div className="p-5 flex items-center justify-start">
+      <div className="px-5 py-4 flex items-center justify-start">
         <img 
           src="/logo.png" 
           alt="NexusAI Enterprise" 
-          className="h-16 w-auto object-contain" 
+          className="h-24 w-auto object-contain" 
         />
       </div>
 
